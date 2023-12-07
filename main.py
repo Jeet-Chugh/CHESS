@@ -9,7 +9,7 @@ class Board:
         def assign_piece(num):
 
             # no pieces assigned to squares 17 - 48
-            if (num > 16 and num < 49):
+            if (num >= 17 and num <= 48):
                 return None
             # white pawns from squares 9 - 16
             if (num >= 9 and num <= 16):
