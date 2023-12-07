@@ -1,6 +1,6 @@
-from board import Board
+from game import Game
 
 # Run the following:
 if __name__ == "__main__":
-    board = Board()
-    print(board)
+    game = Game()
+    game.move(48, 2)

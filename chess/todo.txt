@@ -1,0 +1,7 @@
+TO DO:
+- board.py: turn grid into a dictionary with keys (0,0) for a1, (7,7) for h8
+- populate the dictionary with default starting pieces
+- create a helper function to print the game board
+- create function to parse the input of the user into a discernable move
+
+- 

@@ -59,19 +59,24 @@ class Board:
             printable_string += "\n"
         return printable_string
     
+    def get_location(self, num):
+        if (num < 1 or num > 64):
+            raise ValueError("Invalid num: " + str(num))
+        
+        for i in range(8):
+            for j in range(8):
+                if self.grid[i][j].number == num:
+                    return (i, j)
+    
 class Square:
     def __init__(self, number, piece=None) -> None:
         self.number = number
         self.piece = piece
-
-    def get_piece_name(self):
-        if (self.piece is None):
-            # placeholder for "empty" squares ("empty" = squares without pieces)
-            return "0" * 11
-        # returns in format "whiteRook"
-        return self.piece.color + str(self.piece)
     
-    # Returns position of square as a grid location (examples: "h1, b5")
-    def get_position(self):
-        col_dict = {1 : "a", 2 : "b", 3 : "c", 4 : "d", 5 : "e", 6 : "f", 7 : "g", 0 : "h"}
-        return col_dict[self.number % 8] + str(int((self.number - 1) / 8) + 1)
+    def set_piece(self, new_piece):
+        self.piece = new_piece
+
+    def get_all_moves(self, grid, location):
+        if (self.piece is None):
+            return []
+        return self.piece.get_all_moves(grid, location)

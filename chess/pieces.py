@@ -6,6 +6,8 @@ class Rook(Piece):
     def __init__(self, color) -> None:
         super().__init__(color)
 
+    
+
     def __str__(self) -> str:
         return "Rook  "
 
