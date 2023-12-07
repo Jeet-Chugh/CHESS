@@ -1,3 +1,5 @@
+from pieces import Rook, Knight, Bishop, Queen, King, Pawn
+
 class Board:
     def __init__(self) -> None:
         self.grid = self.create_board()
@@ -63,7 +65,7 @@ class Square:
         self.piece = piece
 
     def get_piece_name(self):
-        if (self.piece == None):
+        if (self.piece is None):
             # placeholder for "empty" squares ("empty" = squares without pieces)
             return "0" * 11
         # returns in format "whiteRook"
@@ -73,55 +75,3 @@ class Square:
     def get_position(self):
         col_dict = {1 : "a", 2 : "b", 3 : "c", 4 : "d", 5 : "e", 6 : "f", 7 : "g", 0 : "h"}
         return col_dict[self.number % 8] + str(int((self.number - 1) / 8) + 1)
-    
-# Parent class for all specified pieces
-class Piece():
-    def __init__(self, color) -> None:
-        self.color = color
-
-class Rook(Piece):
-    def __init__(self, color) -> None:
-        super().__init__(color)
-
-    def __str__(self) -> str:
-        return "Rook  "
-
-class Knight(Piece):
-    def __init__(self, color) -> None:
-        super().__init__(color)
-
-    def __str__(self) -> str:
-        return "Knight"
-
-class Bishop(Piece):
-    def __init__(self, color) -> None:
-        super().__init__(color)
-    
-    def __str__(self) -> str:
-        return "Bishop"
-
-class Queen(Piece):
-    def __init__(self, color) -> None:
-        super().__init__(color)
-
-    def __str__(self) -> str:
-        return "Queen "
-
-class King(Piece):
-    def __init__(self, color) -> None:
-        super().__init__(color)
-
-    def __str__(self) -> str:
-        return "King  "
-
-class Pawn(Piece):
-    def __init__(self, color) -> None:
-        super().__init__(color)
-
-    def __str__(self) -> str:
-        return "Pawn  "
-
-# Run the following:
-if __name__ == "__main__":
-    board = Board()
-    print(board)
