@@ -1,47 +1,24 @@
 class Piece():
-    def __init__(self, color) -> None:
+    def __init__(self, color, icon) -> None:
         self.color = color
+        self.icon = icon
+
+    def __str__(self) -> str:
+        return self.icon
+    
+    def __repr__(self) -> str:
+        return self.icon
 
 class Rook(Piece):
-    def __init__(self, color) -> None:
-        super().__init__(color)
-
-    
-
-    def __str__(self) -> str:
-        return "Rook  "
-
+    pass
 class Knight(Piece):
-    def __init__(self, color) -> None:
-        super().__init__(color)
-
-    def __str__(self) -> str:
-        return "Knight"
-
+    pass
 class Bishop(Piece):
-    def __init__(self, color) -> None:
-        super().__init__(color)
-    
-    def __str__(self) -> str:
-        return "Bishop"
-
+    pass
 class Queen(Piece):
-    def __init__(self, color) -> None:
-        super().__init__(color)
-
-    def __str__(self) -> str:
-        return "Queen "
+    pass
 
 class King(Piece):
-    def __init__(self, color) -> None:
-        super().__init__(color)
-
-    def __str__(self) -> str:
-        return "King  "
-
+    pass
 class Pawn(Piece):
-    def __init__(self, color) -> None:
-        super().__init__(color)
-
-    def __str__(self) -> str:
-        return "Pawn  "
+    pass

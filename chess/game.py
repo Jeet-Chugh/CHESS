@@ -1,30 +1,62 @@
 from pieces import Rook, Knight, Bishop, Queen, King, Pawn
-from board import Board
 
+WHITE = "white"
+BLACK = "black"
 class Game():
 
-    # When starting a new game, create a new board and set it to be whites turn
+    # Starting new game sets turn to WHITE and populates board
     def __init__(self) -> None:
-        self.board = Board()
-        self.turn = "white"
+        self.turn = WHITE
+        self.create_board()
 
-    # printing a game just prints the board
-    def __str__(self) -> str:
-        return str(self.board)
+    def create_board(self):
+
+        # First rank piece placement for WHITE and BLACK
+        PIECE_ORDER = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
+
+        ICON_DICT = {
+                WHITE : {Rook : "♖", Knight : "♘", Bishop : "♗", King : "♔", Queen : "♕", Pawn : "♙"}, 
+                BLACK : {Rook : "♜", Knight : "♞", Bishop : "♝", King : "♚", Queen : "♛", Pawn : "♟"}
+            }
+
+        board = {}
+        for i in range(8):
+
+            # Populate first and second rank (white)
+            board[(0, i)] = PIECE_ORDER[i](color=WHITE, icon=ICON_DICT[WHITE][PIECE_ORDER[i]])
+            board[(1, i)] = Pawn(color=WHITE, icon=ICON_DICT[WHITE][Pawn])
+
+            # Populate eighth and seventh rank (black)
+            board[(7, i)] = PIECE_ORDER[i](color=BLACK, icon=ICON_DICT[BLACK][PIECE_ORDER[i]])
+            board[(6, i)] = Pawn(color=BLACK, icon=ICON_DICT[BLACK][Pawn])
+
+        self.board = board
+
+    def take_user_input(self):
+        args = input("Enter your move:    ").split(" ")
+        assert len(args) == 2
+        start_square = self.square_to_tuple(args[0])
+        end_square = self.square_to_tuple(args[1])
+        return (start_square, end_square)
+
     
-    # alternates turns between black and white, calls move function depending on whos turn it is
-    def move(self, from_num, to_num):
-        if (self.turn == "white"):
-            self.turn = "black"
-        elif (self.turn == "black"):
-            self.turn = "white"
-        else:
-            raise ValueError("Illegal turn: " + self.turn)
-        
-        from_row, from_col = self.board.get_location(from_num)
-        found_piece = self.board.grid[from_row][from_col].piece
-        if (found_piece is not None):
-            pass
-        else:
-            raise ValueError("No piece found at square number " + from_num)
+    @staticmethod
+    def square_to_tuple(square_string):
+        return (int(square_string[1]) - 1, "abcdefgh".index(square_string[0]))
+
+    # print the chessboard by printing the desired game instance
+    def __str__(self) -> str:
+        row_list = ["-+--------+-"]
+        for i in range(8):
+            row_string = str(8 - i) + "|"
+            for j in range(8):
+                piece_at_location = self.board.get((i, j))
+                if piece_at_location is not None:
+                    row_string += str(piece_at_location)
+                # prints this character if no piece is found at square
+                else:
+                    row_string += "□"
+            row_string += "|" + str(8 - i)
+            row_list.append(row_string)
+        return "\n".join([" |abcdefgh| "] + row_list + [row_list[0]] + [" |abcdefgh| "])
 
