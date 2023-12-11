@@ -1,4 +1,4 @@
 TO DO:
-- create main loop that allows players to make moves
-- create function to validate a legal move
-- create function to make the move
+- create function "a" that checks all available moves for each piece given the gameboard
+- change the gameboard based on the result of a
+- start working on edge cases (capturing, pawn promotion, castling, en passant, pawn first moves)
