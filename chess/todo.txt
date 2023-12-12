@@ -1,4 +1,3 @@
 TO DO:
-- create function "a" that checks all available moves for each piece given the gameboard
-- change the gameboard based on the result of a
-- start working on edge cases (capturing, pawn promotion, castling, en passant, pawn first moves)
+- thoroughly test for all piece moves, capturing, double pawn moves
+- start working on edge cases (pawn promotions, castling, check, en passant, checkmate, stalemate)

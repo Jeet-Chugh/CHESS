@@ -17,3 +17,8 @@ class MoveOutOfTurnError(Exception):
     def __init__(self, given_color, correct_color) -> None:
         self.message = f"Unable to move {given_color} piece during {correct_color}'s turn"
         super().__init__(self.message)
+
+class InvalidMoveError(Exception):
+    def __init__(self, aString, bString) -> None:
+        self.message = f"Unable to move from {aString} to {bString}"
+        super().__init__(self.message)
