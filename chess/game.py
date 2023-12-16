@@ -7,8 +7,15 @@ class Game():
     # Starting new game sets turn to WHITE and populates board
     def __init__(self) -> None:
         self.turn = WHITE
+        self.check = {WHITE : False, BLACK : False}
         self.createBoard()
         self.startGame()
+
+    def switchTurn(self):
+        if self.turn == WHITE:
+            self.turn = BLACK
+        else:
+            self.turn = WHITE 
 
     def createBoard(self):
         # First rank piece placement for WHITE and BLACK
@@ -65,12 +72,51 @@ class Game():
         if not aPiece.validateMove(self.board, a, b):
             raise InvalidMoveError(Square.dictToString(a), Square.dictToString(b))
         
+        check = self.scanForCheck(a, b, self.board)
+        # If player does not move out of a check
+        if self.check[self.turn] and check[self.turn]:
+            raise MoveInCheckError()
+        # If prospective move exposes player to check
+        if self.check[self.turn] == False and check[self.turn]:
+            raise ExposingCheckError()
+        self.check = check
+
+        # Make the move
         self.board[(b["row"], b["col"])] = self.board[(a["row"], a["col"])]
         del self.board[(a["row"], a["col"])]
-        if (self.turn == WHITE):
-            self.turn = BLACK
-        else:
-            self.turn = WHITE
+
+        print("Wcheck : " + str(self.check[WHITE]) + ", Bcheck : " + str(self.check[BLACK]))
+        self.switchTurn()
+
+    @staticmethod
+    def scanForCheck(a, b, board):
+
+        def canSeeKing(kingLocation, pieceList, board):
+            for piece,position in pieceList:
+                if piece.validateMove(board, Square.tupleToDict(position), Square.tupleToDict(kingLocation)):
+                    return True
+            return False
+    
+        # create shallow copy of board to see if prospective move causes check
+        prospectiveBoard = board.copy()
+
+        # make the move on the copied board
+        prospectiveBoard[(b["row"], b["col"])] = prospectiveBoard[(a["row"], a["col"])]
+        del prospectiveBoard[(a["row"], a["col"])]
+
+        # find locations for both kings on the board
+        kingLocations = {}
+        pieceDict = {BLACK : [], WHITE : []}
+        for location,piece in prospectiveBoard.items():
+            if type(piece) == King:
+                kingLocations[piece.color] = location
+            pieceDict[piece.color].append((piece, location))
+
+        # Returns a dictionary that determines each colors check status
+        checkDict = {}
+        checkDict[WHITE] = canSeeKing(kingLocations[WHITE], pieceDict[BLACK], prospectiveBoard)
+        checkDict[BLACK] = canSeeKing(kingLocations[BLACK], pieceDict[WHITE], prospectiveBoard)
+        return checkDict  
 
     def takeInput(self):
         originalArgs = input("Enter your move:    ")

@@ -1,3 +1,2 @@
 TO DO:
-- thoroughly test for all piece moves, capturing, double pawn moves
-- start working on edge cases (pawn promotions, castling, check, en passant, checkmate, stalemate)
+- start working on edge cases (pawn promotions, castling, en passant, checkmate, stalemate)

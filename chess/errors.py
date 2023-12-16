@@ -22,3 +22,13 @@ class InvalidMoveError(Exception):
     def __init__(self, aString, bString) -> None:
         self.message = f"Unable to move from {aString} to {bString}"
         super().__init__(self.message)
+
+class MoveInCheckError(Exception):
+    def __init__(self) -> None:
+        self.message = "Cannot move while in check!"
+        super().__init__(self.message)
+
+class ExposingCheckError(Exception):
+    def __init__(self) -> None:
+        self.message = "Move exposes you to check!"
+        super().__init__(self.message)

@@ -6,18 +6,22 @@ class Square():
             return 0 <= square["row"] < 8 and 0 <= square["col"] < 8
         return 0 <= r < 8 and 0 <= c < 8
     
-    # Turns string in format "e4" into tuple location on board "(3,4)"
+    # Turns string in format "e4" into dict "{"row" : 3, "col" : 4}"
     @staticmethod
     def stringToDict(squareString):
         VALID_COLS = "abcdefgh"
         colString, rowString = squareString[0], squareString[1:]
         if colString in VALID_COLS: 
             colVal = VALID_COLS.index(squareString[0])
-        else:  
+        else:
             colVal = -1
         return {"row" : int(rowString) - 1, "col" : colVal}
-    
-    # Turns tuple in format "(3,4)" into string in format "e4"
+
+    @staticmethod
+    def tupleToDict(squareString):
+        return {"row" : squareString[0], "col" : squareString[1]}
+
+    # Turns dict in format "{"row" : 3, "col" : 4}" into string in format "e4"
     @staticmethod
     def dictToString(squareDict):
         COL_DICT = {0 : "a", 1 : "b", 2 : "c", 3 : "d", 4 : "e", 5 : "f", 6 : "g", 7 : "h"}
@@ -32,6 +36,7 @@ class Piece(Square):
 
     # Returns a boolean that dictates whether the move is legal
     def validateMove(self, board, a, b):
+        print(a, b)
         return (b["row"], b["col"]) in self.availableMoves(board, a["row"], a["col"])
     
     def availableMoves(self, board, r, c):
@@ -114,7 +119,7 @@ class Pawn(Piece):
         forward = False
         # capturing to the left
         if (r + self.direction, c - 1) in board and self.noConflict(board, r + self.direction, c - 1): 
-            moves.append((r + 1, c + self.direction))
+            moves.append((r + self.direction, c - 1))
         # capturing to the right
         if (r + self.direction, c + 1) in board and self.noConflict(board, r + self.direction, c + 1):
             moves.append((r + self.direction, c + 1))
