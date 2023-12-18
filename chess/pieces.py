@@ -2,7 +2,7 @@ WHITE = "white"
 BLACK = "black"
 
 class Square():
-    # Checks if square in either form r,c or (r,c) is a valid square on the board
+    # Checks if square in form row,col is on the board
     @staticmethod
     def isOnBoard(r, c):
         return 0 <= r < 8 and 0 <= c < 8
@@ -31,6 +31,11 @@ class Square():
             if type(piece) == King:
                 kingLocations[piece.color] = location
                 continue
+            if type(piece) == Pawn:
+                piece.enPassant["age"] += 1
+                if piece.enPassant["age"] > 1:
+                    piece.enPassant["age"] = 0
+                    piece.enPassant["col"] = -1
             pieceDict[piece.color].append((piece, location))
 
         # Returns a dictionary that determines each colors check status
@@ -50,6 +55,7 @@ class Square():
             colVal = -1
         return {"row" : int(rowString) - 1, "col" : colVal}
 
+    # Turns tuple in format (r, c) into dict with format {"row" : row, "col" : col}
     @staticmethod
     def tupleToDict(squareString):
         return {"row" : squareString[0], "col" : squareString[1]}
@@ -101,6 +107,7 @@ class Piece(Square):
     def __repr__(self) -> str:
         return self.icon
 
+# Class for pieces that need to be tracked for their first move (king, rook)
 class TrackedPiece(Piece):
     def __init__(self, color, icon) -> None:
         super().__init__(color, icon)
@@ -141,8 +148,8 @@ class King(TrackedPiece):
                 (r, c - 1), (r - 1, c), (r - 1, c + 1), (r - 1, c - 1)]
 
     def availableMoves(self, board, r, c):
-        castling = self.castlingMoves(board, r, c)
-        return [(row, col) for row, col in self.kingList(r, c) if self.noConflict(board, row, col)] + castling
+        castlingMoves = self.castlingMoves(board, r, c)
+        return [(row, col) for row, col in self.kingList(r, c) if self.noConflict(board, row, col)] + castlingMoves
     
     # Overrides validateMove to reset moved to False if the attempted move is illegal
     def validateMove(self, board, a, b, test=False):
@@ -156,11 +163,11 @@ class King(TrackedPiece):
     def castlingMoves(self, board, r, c):
         if self.color == WHITE:  col = 0
         elif self.color == BLACK:  col = 7
-        castling = []
+        castlingMoves = []
 
         # If we are WHITE and the king hasnt moved
         if self.moved:
-            return castling
+            return castlingMoves
         
         # queenside castle, rook present, rook hasnt moved, no pieces in between 
         if type(board.get((col, 0))) == Rook and board.get((col, 0)).moved == False \
@@ -174,7 +181,7 @@ class King(TrackedPiece):
                     del prospectiveBoard[(col, 4)]
                     # if moving two to the left doesnt result in check
                     if self.scanForCheck(self.tupleToDict((col, 3)), self.tupleToDict((col, 2)), prospectiveBoard)[self.color] == False:
-                        castling.append((col, 2))
+                        castlingMoves.append((col, 2))
 
         # kingside castle, rook present, rook hasnt moved, no pieces in between 
         if type(board.get((col, 7))) == Rook and board.get((col, 7)).moved == False \
@@ -188,8 +195,8 @@ class King(TrackedPiece):
                     del prospectiveBoard[(col, 4)]
                     # if moving two to the right doesnt result in check
                     if self.scanForCheck(self.tupleToDict((col, 5)), self.tupleToDict((col, 6)), prospectiveBoard)[self.color] == False:
-                        castling.append((col, 6))
-        return castling
+                        castlingMoves.append((col, 6))
+        return castlingMoves
 
 class Pawn(Piece):
     # Accepts a direction, which is 1 for white and -1 for black
@@ -197,9 +204,16 @@ class Pawn(Piece):
         self.color = color
         self.icon = icon
         self.direction = direction
+        # En passant validity status for each individual piece
+        self.enPassant = {"col" : -1, "age" : 0}
 
     def availableMoves(self, board, r, c):
         moves = []
+        # En passant
+        if self.enPassant["col"] != -1 and self.color == WHITE and r == 4:
+            moves.append((5, self.enPassant["col"]))
+        elif self.enPassant["col"] != -1 and self.color == BLACK and r == 3:
+            moves.append((2, self.enPassant["col"]))
         # capturing to the left
         if (r + self.direction, c - 1) in board and self.noConflict(board, r + self.direction, c - 1): 
             moves.append((r + self.direction, c - 1))
@@ -215,3 +229,22 @@ class Pawn(Piece):
         elif self.color == BLACK and r == 6 and ((r + self.direction, c) in moves):
             moves.append((r - 2, c))
         return moves
+    
+    # Returns a boolean that dictates whether the move is legal
+    def validateMove(self, board, a, b, test=False):
+        if not (b["row"], b["col"]) in self.availableMoves(board, a["row"], a["col"]):
+            return False
+        
+        # If double pawn move, update en passants for horizontally adjacent opposing pawns
+        magnitude = b["row"] - a["row"]
+        if magnitude in [-2, 2]:
+            left = board.get((b["row"], b["col"] - 1))
+            right = board.get((b["row"], b["col"] + 1))
+            if left is not None and type(left) == Pawn and left.color != self.color:
+                left.enPassant["col"] = b["col"]
+                left.enPassant["age"] = 0
+            if right is not None and type(right) == Pawn and right.color != self.color:
+                right.enPassant["col"] = b["col"]
+                right.enPassant["age"] = 0
+        self.enPassant = {"col" : -1, "age" : 0}
+        return True

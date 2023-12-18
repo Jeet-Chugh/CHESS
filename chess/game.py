@@ -4,7 +4,6 @@ from errors import *
 WHITE = "white"
 BLACK = "black"
 class Game():
-    # Starting new game sets turn to WHITE and populates board
     def __init__(self) -> None:
         self.turn = WHITE
         self.check = {WHITE : False, BLACK : False}
@@ -18,7 +17,6 @@ class Game():
             self.turn = WHITE 
 
     def createBoard(self):
-        # First rank piece placement for WHITE and BLACK
         PIECE_ORDER = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
         ICON_DICT = {
                 BLACK : {Rook : "♖", Knight : "♘", Bishop : "♗", King : "♔", Queen : "♕", Pawn : "♙"}, 
@@ -41,22 +39,21 @@ class Game():
             # print the board each turn
             print("\n\n" + str(self) + "\n\n")
 
-            # take the users input and store their intended start and end square, a and b
+            # map user inputted moves to a,b in dict form {"row" : r, "col" : c}
             a, b = self.takeInput()
-            if ((a, b) == (None, None)):
-                print("Exiting game loop")
-                break
-
+            if ((a, b) == (None, None)):  break
+            
             self.move(a, b)
 
     def move(self, a, b):
-        # Check if start and end square are within the board
+
+        # Check both squares exist on a board
         if not Square.isOnBoard(a["row"], a["col"]):
             raise SquareNotOnBoardError(a)
         if not Square.isOnBoard(b["row"], b["col"]):
             raise SquareNotOnBoardError(b)
 
-        # Check if start_square is a piece
+        # Check starting square is a piece
         aPiece = self.board.get((a["row"], a["col"]))
         if aPiece is None:
             raise PieceNotFoundError(a)
@@ -79,9 +76,14 @@ class Game():
             raise ExposingCheckError()
         self.check = check
 
-        # Make the move
-        # Castling specific logic
-        if type(aPiece) == King and (b["row"], b["col"]) not in King.kingList(a["row"], a["col"]):
+        # En Passant 
+        if type(aPiece) == Pawn and b["col"] != a["col"] and self.board.get((b["row"], b["col"])) is None:
+            self.board[(b["row"], b["col"])] = self.board[(a["row"], a["col"])]
+            del self.board[(a["row"], a["col"])]
+            del self.board[(a["row"], b["col"])]
+
+        # Castling
+        elif type(aPiece) == King and (b["row"], b["col"]) not in King.kingList(a["row"], a["col"]):
             # Queenside castling
             if b["col"] == 2:
                 self.board[(b["row"], b["col"])] = self.board[(a["row"], a["col"])]
@@ -94,16 +96,18 @@ class Game():
                 self.board[(b["row"], 5)] = self.board[(b["row"], 7)]
                 del self.board[(a["row"], a["col"])]
                 del self.board[(a["row"], 7)]
-        # normal logic 
+
+        # Normal move 
         else:
             self.board[(b["row"], b["col"])] = self.board[(a["row"], a["col"])]
             del self.board[(a["row"], a["col"])]
+
         self.switchTurn()
 
     def takeInput(self):
         originalArgs = input("Enter your move:    ")
 
-        # command to exit the game loop
+        # Game loop break condition
         QUIT = "quit"
         if (originalArgs.lower() == QUIT):
             return (None, None)
@@ -116,7 +120,7 @@ class Game():
         except:
             raise InputDecodingError(originalArgs)
 
-    # string representation of the game: used for printing
+    # string representation of the game used for printing
     def __str__(self) -> str:
         row_list = ["-+--------+-"]
         for i in range(8):
