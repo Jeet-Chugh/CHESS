@@ -3,6 +3,11 @@ from errors import *
 
 WHITE = "white"
 BLACK = "black"
+
+ICON_DICT = {
+                BLACK : {Rook : "♖", Knight : "♘", Bishop : "♗", King : "♔", Queen : "♕", Pawn : "♙"}, 
+                WHITE : {Rook : "♜", Knight : "♞", Bishop : "♝", King : "♚", Queen : "♛", Pawn : "♟"}
+            }
 class Game():
     def __init__(self) -> None:
         self.turn = WHITE
@@ -18,10 +23,6 @@ class Game():
 
     def createBoard(self):
         PIECE_ORDER = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
-        ICON_DICT = {
-                BLACK : {Rook : "♖", Knight : "♘", Bishop : "♗", King : "♔", Queen : "♕", Pawn : "♙"}, 
-                WHITE : {Rook : "♜", Knight : "♞", Bishop : "♝", King : "♚", Queen : "♛", Pawn : "♟"}
-            }
 
         board = {}
         for i in range(8):
@@ -76,8 +77,15 @@ class Game():
             raise ExposingCheckError()
         self.check = check
 
+        # Pawn promotion
+        if type(aPiece) == Pawn and b["row"] in [0, 7] and self.board.get((b["row"], b["col"])) is None:
+            promotionDict = {"r" : Rook, "n" : Knight, "k" : Knight, "b" : Bishop, "q" : Queen}
+            newPiece = promotionDict[input("Promote to: ").lower()]
+            self.board[(b["row"], b["col"])] = newPiece(aPiece.color, ICON_DICT[aPiece.color][newPiece])
+            del self.board[(a["row"], a["col"])]
+
         # En Passant 
-        if type(aPiece) == Pawn and b["col"] != a["col"] and self.board.get((b["row"], b["col"])) is None:
+        elif type(aPiece) == Pawn and b["col"] != a["col"] and self.board.get((b["row"], b["col"])) is None:
             self.board[(b["row"], b["col"])] = self.board[(a["row"], a["col"])]
             del self.board[(a["row"], a["col"])]
             del self.board[(a["row"], b["col"])]

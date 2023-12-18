@@ -2,4 +2,4 @@ TO DO:
 - test castling in all specific cases
 - improve runtime by checking if functions are run more than once
 - implement checkmate 
-- work more on edge cases (pawn promotions, en passant, stalemate)
+- implement stalemate
