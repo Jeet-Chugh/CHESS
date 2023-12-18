@@ -1,4 +1,5 @@
 TO DO:
+- restructure board class and clean up code
 - create testing interface (unit test)
 - test all types of special and normal moves
 - improve runtime by checking if functions are run more than once

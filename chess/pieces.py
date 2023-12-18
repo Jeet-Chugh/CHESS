@@ -287,3 +287,8 @@ class Pawn(Piece):
                 right.enPassant["age"] = 0
         self.enPassant = {"col" : -1, "age" : 0}
         return True
+    
+ICON_DICT = {
+                BLACK : {Rook : "♖", Knight : "♘", Bishop : "♗", King : "♔", Queen : "♕", Pawn : "♙"}, 
+                WHITE : {Rook : "♜", Knight : "♞", Bishop : "♝", King : "♚", Queen : "♛", Pawn : "♟"}
+            }
