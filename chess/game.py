@@ -46,17 +46,14 @@ class Game():
             if ((a, b) == (None, None)):
                 print("Exiting game loop")
                 break
-            try:
-                self.move(a, b)
-            except InvalidMoveError:
-                print("Invalid Move" + "\n\n")
-                continue
+
+            self.move(a, b)
 
     def move(self, a, b):
         # Check if start and end square are within the board
-        if not Square.isOnBoard(square=a):
+        if not Square.isOnBoard(a["row"], a["col"]):
             raise SquareNotOnBoardError(a)
-        if not Square.isOnBoard(square=b):
+        if not Square.isOnBoard(b["row"], b["col"]):
             raise SquareNotOnBoardError(b)
 
         # Check if start_square is a piece
@@ -72,51 +69,36 @@ class Game():
         if not aPiece.validateMove(self.board, a, b):
             raise InvalidMoveError(Square.dictToString(a), Square.dictToString(b))
         
-        check = self.scanForCheck(a, b, self.board)
+        check = Square.scanForCheck(a, b, self.board)
         # If player does not move out of a check
         if self.check[self.turn] and check[self.turn]:
             raise MoveInCheckError()
+        
         # If prospective move exposes player to check
         if self.check[self.turn] == False and check[self.turn]:
             raise ExposingCheckError()
         self.check = check
 
         # Make the move
-        self.board[(b["row"], b["col"])] = self.board[(a["row"], a["col"])]
-        del self.board[(a["row"], a["col"])]
-
-        print("Wcheck : " + str(self.check[WHITE]) + ", Bcheck : " + str(self.check[BLACK]))
+        # Castling specific logic
+        if type(aPiece) == King and (b["row"], b["col"]) not in King.kingList(a["row"], a["col"]):
+            # Queenside castling
+            if b["col"] == 2:
+                self.board[(b["row"], b["col"])] = self.board[(a["row"], a["col"])]
+                self.board[(b["row"], 3)] = self.board[(b["row"], 0)]
+                del self.board[(a["row"], a["col"])]
+                del self.board[(a["row"], 0)]
+            # Kingside castling
+            elif b["col"] == 6:
+                self.board[(b["row"], b["col"])] = self.board[(a["row"], a["col"])]
+                self.board[(b["row"], 5)] = self.board[(b["row"], 7)]
+                del self.board[(a["row"], a["col"])]
+                del self.board[(a["row"], 7)]
+        # normal logic 
+        else:
+            self.board[(b["row"], b["col"])] = self.board[(a["row"], a["col"])]
+            del self.board[(a["row"], a["col"])]
         self.switchTurn()
-
-    @staticmethod
-    def scanForCheck(a, b, board):
-
-        def canSeeKing(kingLocation, pieceList, board):
-            for piece,position in pieceList:
-                if piece.validateMove(board, Square.tupleToDict(position), Square.tupleToDict(kingLocation)):
-                    return True
-            return False
-    
-        # create shallow copy of board to see if prospective move causes check
-        prospectiveBoard = board.copy()
-
-        # make the move on the copied board
-        prospectiveBoard[(b["row"], b["col"])] = prospectiveBoard[(a["row"], a["col"])]
-        del prospectiveBoard[(a["row"], a["col"])]
-
-        # find locations for both kings on the board
-        kingLocations = {}
-        pieceDict = {BLACK : [], WHITE : []}
-        for location,piece in prospectiveBoard.items():
-            if type(piece) == King:
-                kingLocations[piece.color] = location
-            pieceDict[piece.color].append((piece, location))
-
-        # Returns a dictionary that determines each colors check status
-        checkDict = {}
-        checkDict[WHITE] = canSeeKing(kingLocations[WHITE], pieceDict[BLACK], prospectiveBoard)
-        checkDict[BLACK] = canSeeKing(kingLocations[BLACK], pieceDict[WHITE], prospectiveBoard)
-        return checkDict  
 
     def takeInput(self):
         originalArgs = input("Enter your move:    ")

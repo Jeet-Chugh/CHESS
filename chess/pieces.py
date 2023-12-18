@@ -1,10 +1,43 @@
+WHITE = "white"
+BLACK = "black"
+
 class Square():
     # Checks if square in either form r,c or (r,c) is a valid square on the board
     @staticmethod
-    def isOnBoard(r=None, c=None, square=None):
-        if square is not None:
-            return 0 <= square["row"] < 8 and 0 <= square["col"] < 8
+    def isOnBoard(r, c):
         return 0 <= r < 8 and 0 <= c < 8
+    
+    @staticmethod
+    def scanForCheck(a, b, board):
+
+        def canSeeKing(kingLocation, pieceList, board):
+            for piece,position in pieceList:
+                if piece.validateMove(board, Square.tupleToDict(position), Square.tupleToDict(kingLocation)):
+                    return True
+            return False
+    
+        # create shallow copy of board to see if prospective move causes check
+        prospectiveBoard = board.copy()
+
+        # make the move on the copied board
+        if a != b:
+            prospectiveBoard[(b["row"], b["col"])] = prospectiveBoard[(a["row"], a["col"])]
+            del prospectiveBoard[(a["row"], a["col"])]
+
+        # find locations for both kings on the board
+        kingLocations = {}
+        pieceDict = {BLACK : [], WHITE : []}
+        for location,piece in prospectiveBoard.items():
+            if type(piece) == King:
+                kingLocations[piece.color] = location
+                continue
+            pieceDict[piece.color].append((piece, location))
+
+        # Returns a dictionary that determines each colors check status
+        checkDict = {}
+        checkDict[WHITE] = canSeeKing(kingLocations[WHITE], pieceDict[BLACK], prospectiveBoard)
+        checkDict[BLACK] = canSeeKing(kingLocations[BLACK], pieceDict[WHITE], prospectiveBoard)
+        return checkDict
     
     # Turns string in format "e4" into dict "{"row" : 3, "col" : 4}"
     @staticmethod
@@ -35,8 +68,7 @@ class Piece(Square):
         self.DIAGONALS = [(1,1), (-1,1), (1,-1), (-1,-1)]
 
     # Returns a boolean that dictates whether the move is legal
-    def validateMove(self, board, a, b):
-        print(a, b)
+    def validateMove(self, board, a, b, test=False):
         return (b["row"], b["col"]) in self.availableMoves(board, a["row"], a["col"])
     
     def availableMoves(self, board, r, c):
@@ -69,7 +101,19 @@ class Piece(Square):
     def __repr__(self) -> str:
         return self.icon
 
-class Rook(Piece):
+class TrackedPiece(Piece):
+    def __init__(self, color, icon) -> None:
+        super().__init__(color, icon)
+        self.moved = False
+
+    # Overrides validateMove to reset moved to False if the attempted move is illegal
+    def validateMove(self, board, a, b, test=False):
+        validity = (b["row"], b["col"]) in self.availableMoves(board, a["row"], a["col"])
+        if not self.moved:
+            self.moved = validity
+        return validity
+
+class Rook(TrackedPiece):
     def availableMoves(self, board, r, c):
         return self.findAvailableMoves(board, r, c, self.CARDINALS)
 class Knight(Piece):
@@ -89,7 +133,7 @@ class Queen(Piece):
     def availableMoves(self, board, r, c):
         return self.findAvailableMoves(board, r, c, self.CARDINALS + self.DIAGONALS)
 
-class King(Piece):
+class King(TrackedPiece):
     # Set of all legal king moves given a base square
     @staticmethod
     def kingList(r, c):
@@ -97,26 +141,65 @@ class King(Piece):
                 (r, c - 1), (r - 1, c), (r - 1, c + 1), (r - 1, c - 1)]
 
     def availableMoves(self, board, r, c):
-        return [(row, col) for row, col in self.kingList(r, c) if self.noConflict(board, row, col)]
+        castling = self.castlingMoves(board, r, c)
+        return [(row, col) for row, col in self.kingList(r, c) if self.noConflict(board, row, col)] + castling
     
+    # Overrides validateMove to reset moved to False if the attempted move is illegal
+    def validateMove(self, board, a, b, test=False):
+        if test:
+            print(self.availableMoves(board, a["row"], a["col"]))
+        validity = (b["row"], b["col"]) in self.availableMoves(board, a["row"], a["col"])
+        if not self.moved:
+            self.moved = validity
+        return validity
+
+    def castlingMoves(self, board, r, c):
+        if self.color == WHITE:  col = 0
+        elif self.color == BLACK:  col = 7
+        castling = []
+
+        # If we are WHITE and the king hasnt moved
+        if self.moved:
+            return castling
+        
+        # queenside castle, rook present, rook hasnt moved, no pieces in between 
+        if type(board.get((col, 0))) == Rook and board.get((col, 0)).moved == False \
+            and [board.get((col, 1)), board.get((col, 2)), board.get((col, 3))] == [None, None, None]:
+            # if we arent currently in check
+            if self.scanForCheck(self.tupleToDict((col, 4)), self.tupleToDict((col, 4)), board)[self.color] == False:
+                # if moving one to the left doesnt result in check
+                if self.scanForCheck(self.tupleToDict((0, 4)), self.tupleToDict((col, 3)), board)[self.color] == False:
+                    prospectiveBoard = board.copy()
+                    prospectiveBoard[(col, 3)] = prospectiveBoard[(col, 4)]
+                    del prospectiveBoard[(col, 4)]
+                    # if moving two to the left doesnt result in check
+                    if self.scanForCheck(self.tupleToDict((col, 3)), self.tupleToDict((col, 2)), prospectiveBoard)[self.color] == False:
+                        castling.append((col, 2))
+
+        # kingside castle, rook present, rook hasnt moved, no pieces in between 
+        if type(board.get((col, 7))) == Rook and board.get((col, 7)).moved == False \
+        and [board.get((col, 5)), board.get((col, 6))] == [None, None]:
+            # if we arent currently in check
+            if self.scanForCheck(self.tupleToDict((col, 4)), self.tupleToDict((col, 4)), board)[self.color] == False:
+                # if moving one to the right doesnt result in check
+                if self.scanForCheck(self.tupleToDict((col, 4)), self.tupleToDict((col, 5)), board)[self.color] == False:
+                    prospectiveBoard = board.copy()
+                    prospectiveBoard[(col, 5)] = prospectiveBoard[(col, 4)]
+                    del prospectiveBoard[(col, 4)]
+                    # if moving two to the right doesnt result in check
+                    if self.scanForCheck(self.tupleToDict((col, 5)), self.tupleToDict((col, 6)), prospectiveBoard)[self.color] == False:
+                        castling.append((col, 6))
+        return castling
+
 class Pawn(Piece):
     # Accepts a direction, which is 1 for white and -1 for black
     def __init__(self, color, icon, direction):
         self.color = color
         self.icon = icon
         self.direction = direction
-        self.moved = False
-
-    # Overrides validateMove to reset moved to False if the attempted move is illegal
-    def validateMove(self, board, a, b):
-        if not (b["row"], b["col"]) in self.availableMoves(board, a["row"], a["col"]):
-            self.moved = False
-            return False
-        return True
 
     def availableMoves(self, board, r, c):
         moves = []
-        forward = False
         # capturing to the left
         if (r + self.direction, c - 1) in board and self.noConflict(board, r + self.direction, c - 1): 
             moves.append((r + self.direction, c - 1))
@@ -126,9 +209,9 @@ class Pawn(Piece):
         # moving forward by one
         if (r + self.direction, c) not in board: 
             moves.append((r + self.direction, c))
-            forward = True
         # moving forward by two on first move
-        if (not self.moved) and forward and (r + (self.direction * 2), c) not in board:
-            moves.append((r + (self.direction * 2), c))
-            self.moved = True
+        if self.color == WHITE and r == 1 and ((r + self.direction, c) in moves):
+            moves.append((r + 2, c))
+        elif self.color == BLACK and r == 6 and ((r + self.direction, c) in moves):
+            moves.append((r - 2, c))
         return moves

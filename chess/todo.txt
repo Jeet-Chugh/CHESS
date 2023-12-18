@@ -1,2 +1,5 @@
 TO DO:
-- start working on edge cases (pawn promotions, castling, en passant, checkmate, stalemate)
+- test castling in all specific cases
+- improve runtime by checking if functions are run more than once
+- implement checkmate 
+- work more on edge cases (pawn promotions, en passant, stalemate)
