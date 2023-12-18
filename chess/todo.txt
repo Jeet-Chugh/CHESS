@@ -1,5 +1,4 @@
 TO DO:
-- test castling in all specific cases
+- create testing interface (unit test)
+- test all types of special and normal moves
 - improve runtime by checking if functions are run more than once
-- implement checkmate 
-- implement stalemate

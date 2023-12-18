@@ -36,7 +36,8 @@ class Game():
         self.board = board
 
     def startGame(self):
-        while True:
+        finished = False
+        while not finished:
             # print the board each turn
             print("\n\n" + str(self) + "\n\n")
 
@@ -44,7 +45,7 @@ class Game():
             a, b = self.takeInput()
             if ((a, b) == (None, None)):  break
             
-            self.move(a, b)
+            finished = self.move(a, b)
 
     def move(self, a, b):
 
@@ -68,6 +69,7 @@ class Game():
             raise InvalidMoveError(Square.dictToString(a), Square.dictToString(b))
         
         check = Square.scanForCheck(a, b, self.board)
+
         # If player does not move out of a check
         if self.check[self.turn] and check[self.turn]:
             raise MoveInCheckError()
@@ -77,40 +79,27 @@ class Game():
             raise ExposingCheckError()
         self.check = check
 
-        # Pawn promotion
-        if type(aPiece) == Pawn and b["row"] in [0, 7] and self.board.get((b["row"], b["col"])) is None:
-            promotionDict = {"r" : Rook, "n" : Knight, "k" : Knight, "b" : Bishop, "q" : Queen}
-            newPiece = promotionDict[input("Promote to: ").lower()]
-            self.board[(b["row"], b["col"])] = newPiece(aPiece.color, ICON_DICT[aPiece.color][newPiece])
-            del self.board[(a["row"], a["col"])]
-
-        # En Passant 
-        elif type(aPiece) == Pawn and b["col"] != a["col"] and self.board.get((b["row"], b["col"])) is None:
-            self.board[(b["row"], b["col"])] = self.board[(a["row"], a["col"])]
-            del self.board[(a["row"], a["col"])]
-            del self.board[(a["row"], b["col"])]
-
-        # Castling
-        elif type(aPiece) == King and (b["row"], b["col"]) not in King.kingList(a["row"], a["col"]):
-            # Queenside castling
-            if b["col"] == 2:
-                self.board[(b["row"], b["col"])] = self.board[(a["row"], a["col"])]
-                self.board[(b["row"], 3)] = self.board[(b["row"], 0)]
-                del self.board[(a["row"], a["col"])]
-                del self.board[(a["row"], 0)]
-            # Kingside castling
-            elif b["col"] == 6:
-                self.board[(b["row"], b["col"])] = self.board[(a["row"], a["col"])]
-                self.board[(b["row"], 5)] = self.board[(b["row"], 7)]
-                del self.board[(a["row"], a["col"])]
-                del self.board[(a["row"], 7)]
-
-        # Normal move 
-        else:
-            self.board[(b["row"], b["col"])] = self.board[(a["row"], a["col"])]
-            del self.board[(a["row"], a["col"])]
-
+        # Make the move and switch turns
+        self.board = Board.executeMove(a, b, self.board)
         self.switchTurn()
+
+        # Check for any win conditions
+        if self.noLegalMoves():
+            if self.check[self.turn]:
+                # CHECKMATE
+                print(("checkmate, " + self.turn + " wins!").upper())
+                return True
+            # STALEMATE
+            print("STALEMATE!")
+            return True
+
+    def noLegalMoves(self):
+        for location, piece in self.board.items():
+            if piece.color == self.turn:
+                for move in piece.availableMoves(self.board, location[0], location[1]):
+                    if Square.scanForCheck(Square.tupleToDict(location), Square.tupleToDict(move), self.board)[self.turn] == False:
+                        return False
+        return True
 
     def takeInput(self):
         originalArgs = input("Enter your move:    ")

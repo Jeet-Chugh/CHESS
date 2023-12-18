@@ -66,6 +66,45 @@ class Square():
         COL_DICT = {0 : "a", 1 : "b", 2 : "c", 3 : "d", 4 : "e", 5 : "f", 6 : "g", 7 : "h"}
         return COL_DICT[squareDict["col"]] + str(squareDict["row"] + 1)
 
+class Board():
+    @staticmethod
+    def executeMove(a, b, board):
+        aPiece = board.get((a["row"], a["col"]))
+        # Pawn promotion
+        if type(aPiece) == Pawn and b["row"] in [0, 7] and self.board.get((b["row"], b["col"])) is None:
+            promotionDict = {"r" : Rook, "n" : Knight, "k" : Knight, "b" : Bishop, "q" : Queen}
+            newPiece = promotionDict[input("Promote to: ").lower()]
+            board[(b["row"], b["col"])] = newPiece(aPiece.color, ICON_DICT[aPiece.color][newPiece])
+            del board[(a["row"], a["col"])]
+
+        # En Passant 
+        elif type(aPiece) == Pawn and b["col"] != a["col"] and board.get((b["row"], b["col"])) is None:
+            board[(b["row"], b["col"])] = board[(a["row"], a["col"])]
+            del board[(a["row"], a["col"])]
+            del board[(a["row"], b["col"])]
+
+        # Castling
+        elif type(aPiece) == King and (b["row"], b["col"]) not in King.kingList(a["row"], a["col"]):
+            # Queenside castling
+            if b["col"] == 2:
+                board[(b["row"], b["col"])] = board[(a["row"], a["col"])]
+                board[(b["row"], 3)] = board[(b["row"], 0)]
+                del board[(a["row"], a["col"])]
+                del board[(a["row"], 0)]
+            # Kingside castling
+            elif b["col"] == 6:
+                board[(b["row"], b["col"])] = board[(a["row"], a["col"])]
+                board[(b["row"], 5)] = board[(b["row"], 7)]
+                del board[(a["row"], a["col"])]
+                del board[(a["row"], 7)]
+
+        # Normal move 
+        else:
+            board[(b["row"], b["col"])] = board[(a["row"], a["col"])]
+            del board[(a["row"], a["col"])]
+
+        return board
+
 class Piece(Square):
     def __init__(self, color, icon) -> None:
         self.color = color
