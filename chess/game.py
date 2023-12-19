@@ -2,15 +2,16 @@ from pieces import Square, Board, Pawn, Rook, Knight, Bishop, Queen, King
 from pieces import WHITE, BLACK, ICON_DICT
 from errors import *
 
-class Game():
+
+class Game:
     def __init__(self) -> None:
         self.turn = WHITE
-        self.check = {WHITE : False, BLACK : False}
+        self.check = {WHITE: False, BLACK: False}
         self.createBoard()
         self.startGame()
 
     def switchTurn(self):
-        switch = {WHITE : BLACK, BLACK : WHITE}
+        switch = {WHITE: BLACK, BLACK: WHITE}
         self.turn = switch[self.turn]
 
     def createBoard(self):
@@ -18,11 +19,15 @@ class Game():
         board = {}
         for i in range(8):
             # Populate first and second rank (white)
-            board[(0, i)] = PIECE_ORDER[i](color=WHITE, icon=ICON_DICT[WHITE][PIECE_ORDER[i]])
+            board[(0, i)] = PIECE_ORDER[i](
+                color=WHITE, icon=ICON_DICT[WHITE][PIECE_ORDER[i]]
+            )
             board[(1, i)] = Pawn(color=WHITE, icon=ICON_DICT[WHITE][Pawn], direction=1)
 
             # Populate eighth and seventh rank (black)
-            board[(7, i)] = PIECE_ORDER[i](color=BLACK, icon=ICON_DICT[BLACK][PIECE_ORDER[i]])
+            board[(7, i)] = PIECE_ORDER[i](
+                color=BLACK, icon=ICON_DICT[BLACK][PIECE_ORDER[i]]
+            )
             board[(6, i)] = Pawn(color=BLACK, icon=ICON_DICT[BLACK][Pawn], direction=-1)
         self.board = board
 
@@ -34,12 +39,12 @@ class Game():
 
             # map user inputted moves to a,b in dict form {"row" : r, "col" : c}
             a, b = self.takeInput()
-            if ((a, b) == (None, None)):  break
-            
+            if (a, b) == (None, None):
+                break
+
             gameFinished = self.move(a, b)
 
     def move(self, a, b):
-
         # Check both squares exist on a board
         if not Square.isOnBoard(a["row"], a["col"]):
             raise SquareNotOnBoardError(a)
@@ -58,14 +63,14 @@ class Game():
         # Check if move is legal
         if not aPiece.validateMove(self.board, a, b, test=True):
             raise InvalidMoveError(Square.dictToString(a), Square.dictToString(b))
-        
+
         scan = Board.scanForCheck(a, b, self.board)
         Board.updateEnPassant(self.board)
 
         # If player does not move out of a check
         if self.check[self.turn] and scan["status"][self.turn]:
             raise MoveInCheckError()
-        
+
         # If prospective move exposes player to check
         if self.check[self.turn] == False and scan["status"][self.turn]:
             raise ExposingCheckError()
@@ -95,7 +100,14 @@ class Game():
         for location, piece in self.board.items():
             if piece.color == self.turn:
                 for move in piece.availableMoves(self.board, location[0], location[1]):
-                    if Board.scanForCheck(Square.tupleToDict(location), Square.tupleToDict(move), self.board)["status"][self.turn] == False:
+                    if (
+                        Board.scanForCheck(
+                            Square.tupleToDict(location),
+                            Square.tupleToDict(move),
+                            self.board,
+                        )["status"][self.turn]
+                        == False
+                    ):
                         return False
         return True
 
@@ -104,9 +116,9 @@ class Game():
 
         # Game loop break condition
         QUIT = "quit"
-        if (originalArgs.lower() == QUIT):
+        if originalArgs.lower() == QUIT:
             return (None, None)
-        
+
         try:
             args = originalArgs.split(" ")
             a = Square.stringToDict(args[0])
@@ -130,4 +142,6 @@ class Game():
                     row_string += EMPTY_SQUARE
             row_string += "|" + str(i + 1)
             row_list.append(row_string)
-        return "\n".join([" |abcdefgh| "] + [row_list[0]] + row_list[::-1] + [" |abcdefgh| "])
+        return "\n".join(
+            [" |abcdefgh| "] + [row_list[0]] + row_list[::-1] + [" |abcdefgh| "]
+        )
