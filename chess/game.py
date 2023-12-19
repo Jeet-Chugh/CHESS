@@ -1,13 +1,7 @@
-from pieces import *
+from pieces import Square, Board, Pawn, Rook, Knight, Bishop, Queen, King
+from pieces import WHITE, BLACK, ICON_DICT
 from errors import *
 
-WHITE = "white"
-BLACK = "black"
-
-ICON_DICT = {
-                BLACK : {Rook : "♖", Knight : "♘", Bishop : "♗", King : "♔", Queen : "♕", Pawn : "♙"}, 
-                WHITE : {Rook : "♜", Knight : "♞", Bishop : "♝", King : "♚", Queen : "♛", Pawn : "♟"}
-            }
 class Game():
     def __init__(self) -> None:
         self.turn = WHITE
@@ -16,14 +10,11 @@ class Game():
         self.startGame()
 
     def switchTurn(self):
-        if self.turn == WHITE:
-            self.turn = BLACK
-        else:
-            self.turn = WHITE 
+        switch = {WHITE : BLACK, BLACK : WHITE}
+        self.turn = switch[self.turn]
 
     def createBoard(self):
         PIECE_ORDER = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
-
         board = {}
         for i in range(8):
             # Populate first and second rank (white)
@@ -36,8 +27,8 @@ class Game():
         self.board = board
 
     def startGame(self):
-        finished = False
-        while not finished:
+        gameFinished = False
+        while not gameFinished:
             # print the board each turn
             print("\n\n" + str(self) + "\n\n")
 
@@ -45,7 +36,7 @@ class Game():
             a, b = self.takeInput()
             if ((a, b) == (None, None)):  break
             
-            finished = self.move(a, b)
+            gameFinished = self.move(a, b)
 
     def move(self, a, b):
 
@@ -65,22 +56,29 @@ class Game():
             raise MoveOutOfTurnError(aPiece.color, self.turn)
 
         # Check if move is legal
-        if not aPiece.validateMove(self.board, a, b):
+        if not aPiece.validateMove(self.board, a, b, test=True):
             raise InvalidMoveError(Square.dictToString(a), Square.dictToString(b))
         
-        check = Square.scanForCheck(a, b, self.board)
+        scan = Board.scanForCheck(a, b, self.board)
+        Board.updateEnPassant(self.board)
 
         # If player does not move out of a check
-        if self.check[self.turn] and check[self.turn]:
+        if self.check[self.turn] and scan["status"][self.turn]:
             raise MoveInCheckError()
         
         # If prospective move exposes player to check
-        if self.check[self.turn] == False and check[self.turn]:
+        if self.check[self.turn] == False and scan["status"][self.turn]:
             raise ExposingCheckError()
-        self.check = check
+        self.check = scan["status"]
+        print(self.check)
 
-        # Make the move and switch turns
-        self.board = Board.executeMove(a, b, self.board)
+        # If tests have passed, assign updated board
+        self.board = scan["board"]
+
+        # If pawn promotion, refresh check conditions
+        if type(self.board.get((a["row"], a["col"]))) == Pawn and b["row"] in [0, 7]:
+            self.check = Board.scanForCheck(None, None, self.board)
+
         self.switchTurn()
 
         # Check for any win conditions
@@ -97,7 +95,7 @@ class Game():
         for location, piece in self.board.items():
             if piece.color == self.turn:
                 for move in piece.availableMoves(self.board, location[0], location[1]):
-                    if Square.scanForCheck(Square.tupleToDict(location), Square.tupleToDict(move), self.board)[self.turn] == False:
+                    if Board.scanForCheck(Square.tupleToDict(location), Square.tupleToDict(move), self.board)["status"][self.turn] == False:
                         return False
         return True
 

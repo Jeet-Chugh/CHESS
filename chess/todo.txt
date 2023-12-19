@@ -1,5 +1,24 @@
 TO DO:
-- restructure board class and clean up code
+
+Test:
+    - Pawn
+        - En Passant
+            - Right
+                - Black
+                - White
+            - Left
+                - Black
+                - White
+            - Expires after 1 move
+        - Promotion
+            - White
+            - Black
+        - Double Move
+            - White 
+            - Black
+    - Check
+    - Checkmate
+    - Stalemate
 - create testing interface (unit test)
 - test all types of special and normal moves
 - improve runtime by checking if functions are run more than once
