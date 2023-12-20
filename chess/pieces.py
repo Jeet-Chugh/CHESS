@@ -35,8 +35,24 @@ class Board:
     @staticmethod
     def executeMove(a, b, board):
         piece = board.get((a["row"], a["col"]))
+
+        # Double pawn move
+        if type(piece) == Pawn and b["row"] - a["row"] in [-2, 2]:
+            board[(b["row"], b["col"])] = board[(a["row"], a["col"])]
+            sides = [
+                board.get((b["row"], b["col"] - 1)),
+                board.get((b["row"], b["col"] + 1)),
+            ]
+            for side in sides:
+                if (
+                    side is not None
+                    and type(side) == Pawn
+                    and side.color != board[(b["row"], b["col"])].color
+                ):
+                    side.enPassant = {"col": b["col"], "age": 0}
+
         # Pawn promotion
-        if type(piece) == Pawn and b["row"] in [0, 7]:
+        elif type(piece) == Pawn and b["row"] in [0, 7]:
             promotionDict = {"r": Rook, "n": Knight, "b": Bishop, "q": Queen}
             newPiece = promotionDict[input("Promote to: ").lower()]
             board[(b["row"], b["col"])] = newPiece(
@@ -53,9 +69,7 @@ class Board:
             del board[(a["row"], b["col"])]
 
         # Castling
-        elif type(piece) == King and (b["row"], b["col"]) not in King.kingList(
-            a["row"], a["col"]
-        ):
+        elif type(piece) == King and b["col"] - a["col"] in [-2, 2]:
             if b["col"] == 2:
                 board[(b["row"], b["col"])] = board[(a["row"], a["col"])]
                 board[(b["row"], 3)] = board[(b["row"], 0)]
@@ -73,16 +87,38 @@ class Board:
         return board
 
     @staticmethod
+    def insufficientMaterial(board):
+        if len(board.values()) == 2:
+            return True
+
+        minorPieces = {WHITE: [], BLACK: []}
+        for location, piece in board.items():
+            if type(piece) not in [King, Rook, Queen, Pawn]:
+                minorPieces[piece.color].append(piece)
+
+        if len(minorPieces[WHITE]) <= 2 and len(minorPieces[BLACK]) <= 2:
+            for pieceList in [minorPieces[WHITE], minorPieces[BLACK]]:
+                if len(pieceList) == 2:
+                    numBishops = 0
+                    for piece in pieceList:
+                        if type(piece) == Bishop:
+                            numBishops += 1
+                    if numBishops == 2:
+                        return False
+            return True
+
+    @staticmethod
     def updateEnPassant(board):
         for location, piece in board.items():
-            if type(piece) == Pawn:
+            # en passant
+            if type(piece) == Pawn and piece.enPassant["col"] != -1:
                 piece.enPassant["age"] += 1
                 if piece.enPassant["age"] > 1:
                     piece.enPassant["age"] = 0
                     piece.enPassant["col"] = -1
 
     @staticmethod
-    def scanForCheck(a, b, board):
+    def scanForCheck(board):
         def canSeeKing(kingLocation, pieceList, board):
             for piece, position in pieceList:
                 if piece.validateMove(
@@ -92,10 +128,6 @@ class Board:
                 ):
                     return True
             return False
-
-        # make the move on a copy of the board
-        if a != b:
-            board = Board.executeMove(a, b, board.copy())
 
         # find locations for both kings on the board
         kingLocations = {}
@@ -108,11 +140,8 @@ class Board:
 
         # Returns a dictionary that determines each colors check status
         return {
-            "status": {
-                WHITE: canSeeKing(kingLocations[WHITE], pieceDict[BLACK], board),
-                BLACK: canSeeKing(kingLocations[BLACK], pieceDict[WHITE], board),
-            },
-            "board": board,
+            WHITE: canSeeKing(kingLocations[WHITE], pieceDict[BLACK], board),
+            BLACK: canSeeKing(kingLocations[BLACK], pieceDict[WHITE], board),
         }
 
 
@@ -124,9 +153,7 @@ class Piece:
         self.DIAGONALS = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
 
     # Returns a boolean that dictates whether the move is legal
-    def validateMove(self, board, a, b, test=False):
-        if test:
-            print(self.availableMoves(board, a["row"], a["col"]))
+    def validateMove(self, board, a, b):
         return (b["row"], b["col"]) in self.availableMoves(board, a["row"], a["col"])
 
     def availableMoves(self, board, r, c):
@@ -169,9 +196,7 @@ class TrackedPiece(Piece):
         self.moved = False
 
     # Overrides validateMove to reset moved to False if the attempted move is illegal
-    def validateMove(self, board, a, b, test=False):
-        if test:
-            print(self.availableMoves(board, a["row"], a["col"]))
+    def validateMove(self, board, a, b):
         validity = (b["row"], b["col"]) in self.availableMoves(
             board, a["row"], a["col"]
         )
@@ -242,9 +267,7 @@ class King(TrackedPiece):
         ] + castlingMoves
 
     # Overrides validateMove to reset moved to False if the attempted move is illegal
-    def validateMove(self, board, a, b, test=False):
-        if test:
-            print(self.availableMoves(board, a["row"], a["col"]))
+    def validateMove(self, board, a, b):
         validity = (b["row"], b["col"]) in self.availableMoves(
             board, a["row"], a["col"]
         )
@@ -256,6 +279,7 @@ class King(TrackedPiece):
         if self.moved:
             return []
 
+        board = board.copy()
         col = {WHITE: 0, BLACK: 7}[self.color]
         castlingMoves = []
         # queenside castle, rook present, rook hasnt moved, no pieces in between, not in check
@@ -264,46 +288,36 @@ class King(TrackedPiece):
             and not board.get((col, 0)).moved
             and [board.get((col, 1)), board.get((col, 2)), board.get((col, 3))]
             == [None, None, None]
-            and Board.scanForCheck(None, None, board)["status"][self.color] == False
+            and Board.scanForCheck(board)["status"][self.color] == False
         ):
             # if moving one to the left doesnt result in check
-            if not Board.scanForCheck(
+            board = Board.executeMove(
                 Square.tupleToDict((col, 4)), Square.tupleToDict((col, 3)), board
-            )["status"][self.color]:
-                prospectiveBoard = Board.executeMove(
-                    Square.tupleToDict((col, 4)),
-                    Square.tupleToDict((col, 3)),
-                    board.copy(),
-                )
+            )
+            if not Board.scanForCheck(board)[self.color]:
                 # if moving two to the left doesnt result in check
-                if not Board.scanForCheck(
-                    Square.tupleToDict((col, 3)),
-                    Square.tupleToDict((col, 2)),
-                    prospectiveBoard,
-                )["status"][self.color]:
+                board = Board.executeMove(
+                    Square.tupleToDict((col, 3)), Square.tupleToDict((col, 2)), board
+                )
+                if not Board.scanForCheck(board)[self.color]:
                     castlingMoves.append((col, 2))
         # kingside castle, rook present, rook hasnt moved, no pieces in between and not in check
         if (
             type(board.get((col, 7))) == Rook
             and not board.get((col, 7)).moved
             and [board.get((col, 5)), board.get((col, 6))] == [None, None]
-            and Board.scanForCheck(None, None, board)["status"][self.color] == False
+            and not Board.scanForCheck(board)[self.color]
         ):
             # if moving one to the right doesnt result in check
-            if not Board.scanForCheck(
+            board = Board.executeMove(
                 Square.tupleToDict((col, 4)), Square.tupleToDict((col, 5)), board
-            )["status"][self.color]:
-                prospectiveBoard = Board.executeMove(
-                    Square.tupleToDict((col, 4)),
-                    Square.tupleToDict((col, 5)),
-                    board.copy(),
-                )
+            )
+            if not Board.scanForCheck(board)[self.color]:
                 # if moving two to the right doesnt result in check
-                if not Board.scanForCheck(
-                    Square.tupleToDict((col, 5)),
-                    Square.tupleToDict((col, 6)),
-                    prospectiveBoard,
-                )["status"][self.color]:
+                board = Board.executeMove(
+                    Square.tupleToDict((col, 5)), Square.tupleToDict((col, 6)), board
+                )
+                if not Board.scanForCheck(board)[self.color]:
                     castlingMoves.append((col, 6))
         return castlingMoves
 
@@ -343,22 +357,9 @@ class Pawn(Piece):
         return moves
 
     # Returns a boolean that dictates whether the move is legal
-    def validateMove(self, board, a, b, test=False):
-        if test:
-            print(self.availableMoves(board, a["row"], a["col"]))
+    def validateMove(self, board, a, b):
         if not (b["row"], b["col"]) in self.availableMoves(board, a["row"], a["col"]):
             return False
-
-        # If double pawn move, update en passants for horizontally adjacent opposing pawns
-        if b["row"] - a["row"] in [-2, 2]:
-            sides = [
-                board.get((b["row"], b["col"] - 1)),
-                board.get((b["row"], b["col"] + 1)),
-            ]
-            for side in sides:
-                if side is not None and type(side) == Pawn and side.color != self.color:
-                    side.enPassant["col"] = b["col"]
-                    side.enPassant["age"] = 0
         return True
 
 

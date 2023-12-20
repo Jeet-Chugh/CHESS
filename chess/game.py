@@ -7,14 +7,20 @@ class Game:
     def __init__(self) -> None:
         self.turn = WHITE
         self.check = {WHITE: False, BLACK: False}
-        self.createBoard()
+        self.drawOffered = False
+        self.fiftyMoveRule = 0
+        self.positionHistory = {}
+        self.boardHistory = []
+        self.board = self.defaultBoard()
         self.startGame()
 
-    def switchTurn(self):
+    @staticmethod
+    def opposingSide(turn):
         switch = {WHITE: BLACK, BLACK: WHITE}
-        self.turn = switch[self.turn]
+        return switch[turn]
 
-    def createBoard(self):
+    @staticmethod
+    def defaultBoard():
         PIECE_ORDER = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
         board = {}
         for i in range(8):
@@ -29,7 +35,7 @@ class Game:
                 color=BLACK, icon=ICON_DICT[BLACK][PIECE_ORDER[i]]
             )
             board[(6, i)] = Pawn(color=BLACK, icon=ICON_DICT[BLACK][Pawn], direction=-1)
-        self.board = board
+        return board
 
     def startGame(self):
         gameFinished = False
@@ -38,13 +44,31 @@ class Game:
             print("\n\n" + str(self) + "\n\n")
 
             # map user inputted moves to a,b in dict form {"row" : r, "col" : c}
-            a, b = self.takeInput()
+            a, b, arg = self.takeInput()
             if (a, b) == (None, None):
                 break
 
-            gameFinished = self.move(a, b)
+            # resignation
+            if (a, b) == ("resign", None):
+                return self.opposingSide(self.turn)
 
-    def move(self, a, b):
+            # draw
+            if self.drawOffered:
+                if arg is not None and arg == "draw":
+                    return "draw"
+                else:
+                    self.drawOffered = False
+            else:
+                if arg is not None and arg == "draw":
+                    self.drawOffered = True
+
+            gameFinished = self.move(a, b)
+        print(gameFinished)
+
+    def move(self, a, b, c=None):
+        self.boardHistory.append(self.board.copy())
+        Board.updateEnPassant(self.board)
+
         # Check both squares exist on a board
         if not Square.isOnBoard(a["row"], a["col"]):
             raise SquareNotOnBoardError(a)
@@ -61,52 +85,77 @@ class Game:
             raise MoveOutOfTurnError(aPiece.color, self.turn)
 
         # Check if move is legal
-        if not aPiece.validateMove(self.board, a, b, test=True):
+        if not aPiece.validateMove(self.board, a, b):
             raise InvalidMoveError(Square.dictToString(a), Square.dictToString(b))
 
-        scan = Board.scanForCheck(a, b, self.board)
-        Board.updateEnPassant(self.board)
+        # Make the move
+        self.board = Board.executeMove(a, b, self.board)
+        checkStatus = Board.scanForCheck(self.board)
 
         # If player does not move out of a check
-        if self.check[self.turn] and scan["status"][self.turn]:
+        if checkStatus[self.turn] and self.check[self.turn]:
+            self.board = self.boardHistory[-1]
             raise MoveInCheckError()
 
         # If prospective move exposes player to check
-        if self.check[self.turn] == False and scan["status"][self.turn]:
+        if not self.check[self.turn] and checkStatus[self.turn]:
+            self.board = self.boardHistory[-1]
             raise ExposingCheckError()
-        self.check = scan["status"]
-        print(self.check)
 
-        # If tests have passed, assign updated board
-        self.board = scan["board"]
+        self.check = checkStatus
 
-        # If pawn promotion, refresh check conditions
-        if type(self.board.get((a["row"], a["col"]))) == Pawn and b["row"] in [0, 7]:
-            self.check = Board.scanForCheck(None, None, self.board)
+        # DONE VALIDATING MOVE
 
-        self.switchTurn()
+        # 50 move rule
+        if (
+            type(aPiece) == Pawn
+            or self.boardHistory[-1].get((b["row"], b["col"])) is not None
+        ):
+            self.fiftyMoveRule = 0
+        else:
+            self.fiftyMoveRule += 1
+            if self.fiftyMoveRule == 50:
+                return "draw"
 
-        # Check for any win conditions
+        # check for insufficient material
+        if Board.insufficientMaterial(self.board):
+            return "draw"
+
+        # check for repetition
+        if str(self) not in self.positionHistory.keys():
+            self.positionHistory[str(self)] = 1
+        else:
+            self.positionHistory[str(self)] += 1
+            for count in self.positionHistory.values():
+                if count == 3:
+                    return "draw"
+
+        # if pawn promotion, refresh check conditions
+        if type(aPiece) == Pawn and b["row"] in [0, 7]:
+            self.check = Board.scanForCheck(self.board)
+
+        # scan for checkmate or stalemate
         if self.noLegalMoves():
             if self.check[self.turn]:
-                # CHECKMATE
-                print(("checkmate, " + self.turn + " wins!").upper())
-                return True
-            # STALEMATE
-            print("STALEMATE!")
-            return True
+                # checkmate
+                return self.opposingSide(self.turn)
+            # stalemate
+            return "draw"
+
+        self.turn = self.opposingSide(self.turn)
 
     def noLegalMoves(self):
         for location, piece in self.board.items():
             if piece.color == self.turn:
                 for move in piece.availableMoves(self.board, location[0], location[1]):
-                    if (
+                    if not (
                         Board.scanForCheck(
-                            Square.tupleToDict(location),
-                            Square.tupleToDict(move),
-                            self.board,
-                        )["status"][self.turn]
-                        == False
+                            Board.executeMove(
+                                Square.tupleToDict(location),
+                                Square.tupleToDict(move),
+                                self.board.copy(),
+                            )
+                        )[self.turn]
                     ):
                         return False
         return True
@@ -119,11 +168,17 @@ class Game:
         if originalArgs.lower() == QUIT:
             return (None, None)
 
+        RESIGN = "resign"
+        if originalArgs.lower() == RESIGN:
+            return ("resign", None)
+
         try:
             args = originalArgs.split(" ")
             a = Square.stringToDict(args[0])
             b = Square.stringToDict(args[1])
-            return (a, b)
+            if len(args) > 2:
+                return (a, b, args[2])
+            return (a, b, None)
         except:
             raise InputDecodingError(originalArgs)
 

@@ -1,7 +1,9 @@
 TO DO:
 
+- create testing interface (unit test)
 Test:
     - Pawn
+        - Normal moves
         - En Passant
             - Right
                 - Black
@@ -16,9 +18,31 @@ Test:
         - Double Move
             - White 
             - Black
+    - Knight
+        - Normal moves
+    - Bishop
+        - Normal moves
+    - Queen
+        - Normal moves
+    - King
+        - Normal moves
+        - Castling
+            - Queenside
+                - Black
+                - White
+            - Kingside
+                - Black
+                - White
     - Check
+        - Moving out of Check
+        - Moving into Check
+        - Pawn promotion check
+        - En passant check
+        - Castling check
     - Checkmate
     - Stalemate
-- create testing interface (unit test)
-- test all types of special and normal moves
-- improve runtime by checking if functions are run more than once
+    - Resignation
+    - Draw offering 
+    - Repetition
+    - 50 move rule
+    - Insufficient Material
