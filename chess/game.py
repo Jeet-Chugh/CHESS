@@ -2,17 +2,22 @@ from pieces import Square, Board, Pawn, Rook, Knight, Bishop, Queen, King
 from pieces import WHITE, BLACK, ICON_DICT
 from errors import *
 
+QUIT = "quit"
+RESIGN = "resign"
+DRAW = "draw"
+
 
 class Game:
-    def __init__(self) -> None:
+    def __init__(self, board, testMoves=False) -> None:
         self.turn = WHITE
         self.check = {WHITE: False, BLACK: False}
         self.drawOffered = False
         self.fiftyMoveRule = 0
         self.positionHistory = {}
         self.boardHistory = []
-        self.board = self.defaultBoard()
-        self.startGame()
+        self.testMoves = testMoves
+        self.board = board
+        self.outcome = self.startGame()
 
     @staticmethod
     def opposingSide(turn):
@@ -38,34 +43,40 @@ class Game:
         return board
 
     def startGame(self):
-        gameFinished = False
-        while not gameFinished:
+        if self.testMoves:
+            testMovesIndex = 0
+        while True:
             # print the board each turn
             print("\n\n" + str(self) + "\n\n")
 
-            # map user inputted moves to a,b in dict form {"row" : r, "col" : c}
-            a, b, arg = self.takeInput()
-            if (a, b) == (None, None):
-                break
+            # if self.testMoves, pull from that list, otherwise take string input
+            if not self.testMoves:
+                i = self.takeInput(input("Enter your move:    "))
+            else:
+                i = self.takeInput(self.testMoves[testMovesIndex])
+                testMovesIndex += 1
+                if len(self.testMoves) == testMovesIndex:
+                    return None
 
-            # resignation
-            if (a, b) == ("resign", None):
+            if i == QUIT:
+                return None
+            if i == RESIGN:
                 return self.opposingSide(self.turn)
 
-            # draw
             if self.drawOffered:
-                if arg is not None and arg == "draw":
+                if i.get("drawOffered"):
                     return "draw"
                 else:
                     self.drawOffered = False
             else:
-                if arg is not None and arg == "draw":
+                if i.get("drawOffered"):
                     self.drawOffered = True
 
-            gameFinished = self.move(a, b)
-        print(gameFinished)
+            outcome = self.move(i["a"], i["b"], i.get("promotionPiece"))
+            if outcome is not None:
+                return outcome
 
-    def move(self, a, b, c=None):
+    def move(self, a, b, promotionPiece):
         self.boardHistory.append(self.board.copy())
         Board.updateEnPassant(self.board)
 
@@ -89,7 +100,7 @@ class Game:
             raise InvalidMoveError(Square.dictToString(a), Square.dictToString(b))
 
         # Make the move
-        self.board = Board.executeMove(a, b, self.board)
+        self.board = Board.executeMove(a, b, self.board, promotionPiece)
         checkStatus = Board.scanForCheck(self.board)
 
         # If player does not move out of a check
@@ -103,8 +114,6 @@ class Game:
             raise ExposingCheckError()
 
         self.check = checkStatus
-
-        # DONE VALIDATING MOVE
 
         # 50 move rule
         if (
@@ -129,11 +138,7 @@ class Game:
             for count in self.positionHistory.values():
                 if count == 3:
                     return "draw"
-
-        # if pawn promotion, refresh check conditions
-        if type(aPiece) == Pawn and b["row"] in [0, 7]:
-            self.check = Board.scanForCheck(self.board)
-
+                
         # scan for checkmate or stalemate
         if self.noLegalMoves():
             if self.check[self.turn]:
@@ -160,27 +165,37 @@ class Game:
                         return False
         return True
 
-    def takeInput(self):
-        originalArgs = input("Enter your move:    ")
+    # TAKE INPUT IN THE FOLLOWING FORMAT: a (e2), b (e4), promotionPiece (q), drawOffered (True)
+    @staticmethod
+    def takeInput(input):
 
         # Game loop break condition
-        QUIT = "quit"
-        if originalArgs.lower() == QUIT:
-            return (None, None)
+        if input.lower() == QUIT:
+            return QUIT
 
-        RESIGN = "resign"
-        if originalArgs.lower() == RESIGN:
-            return ("resign", None)
+        if input.lower() == RESIGN:
+            return RESIGN
 
         try:
-            args = originalArgs.split(" ")
-            a = Square.stringToDict(args[0])
-            b = Square.stringToDict(args[1])
-            if len(args) > 2:
-                return (a, b, args[2])
-            return (a, b, None)
+            resultDict = {}
+            args = input.split(" ")
+            if len(args) >= 2:
+                resultDict = {
+                    "a": Square.stringToDict(args[0]),
+                    "b": Square.stringToDict(args[1]),
+                }
+
+            if len(args) >= 3:
+                promotionDict = {"r": Rook, "n": Knight, "b": Bishop, "q": Queen}
+                resultDict["promotionPiece"] = promotionDict.get(args[2])
+            
+            if len(args) == 4:
+                if args[3] == DRAW:
+                    resultDict["drawOffered"] = True
+
+            return resultDict
         except:
-            raise InputDecodingError(originalArgs)
+            raise InputDecodingError(input)
 
     # string representation of the game used for printing
     def __str__(self) -> str:

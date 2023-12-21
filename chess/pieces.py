@@ -33,7 +33,7 @@ class Square:
 
 class Board:
     @staticmethod
-    def executeMove(a, b, board):
+    def executeMove(a, b, board, promotionPiece=None):
         piece = board.get((a["row"], a["col"]))
 
         # Double pawn move
@@ -53,10 +53,8 @@ class Board:
 
         # Pawn promotion
         elif type(piece) == Pawn and b["row"] in [0, 7]:
-            promotionDict = {"r": Rook, "n": Knight, "b": Bishop, "q": Queen}
-            newPiece = promotionDict[input("Promote to: ").lower()]
-            board[(b["row"], b["col"])] = newPiece(
-                piece.color, ICON_DICT[piece.color][newPiece]
+            board[(b["row"], b["col"])] = promotionPiece(
+                piece.color, ICON_DICT[piece.color][promotionPiece]
             )
 
         # En Passant
