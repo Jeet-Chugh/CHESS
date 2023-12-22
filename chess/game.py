@@ -30,50 +30,50 @@ class Game:
         board = {}
         for i in range(8):
             # Populate first and second rank (white)
-            board[(0, i)] = PIECE_ORDER[i](
-                color=WHITE, icon=ICON_DICT[WHITE][PIECE_ORDER[i]]
-            )
-            board[(1, i)] = Pawn(color=WHITE, icon=ICON_DICT[WHITE][Pawn], direction=1)
+            board[(0, i)] = PIECE_ORDER[i](WHITE)
+            board[(1, i)] = Pawn(WHITE)
 
             # Populate eighth and seventh rank (black)
-            board[(7, i)] = PIECE_ORDER[i](
-                color=BLACK, icon=ICON_DICT[BLACK][PIECE_ORDER[i]]
-            )
-            board[(6, i)] = Pawn(color=BLACK, icon=ICON_DICT[BLACK][Pawn], direction=-1)
+            board[(7, i)] = PIECE_ORDER[i](BLACK)
+            board[(6, i)] = Pawn(BLACK)
         return board
 
     def startGame(self):
+        doneTesting = False
         if self.testMoves:
             testMovesIndex = 0
         while True:
             # print the board each turn
-            print("\n\n" + str(self) + "\n\n")
+            if not self.testMoves:
+                print("\n\n" + str(self) + "\n\n")
 
             # if self.testMoves, pull from that list, otherwise take string input
             if not self.testMoves:
                 i = self.takeInput(input("Enter your move:    "))
             else:
+                if testMovesIndex == len(self.testMoves) - 1:
+                    doneTesting = True
                 i = self.takeInput(self.testMoves[testMovesIndex])
                 testMovesIndex += 1
-                if len(self.testMoves) == testMovesIndex:
-                    return None
 
             if i == QUIT:
                 return None
             if i == RESIGN:
                 return self.opposingSide(self.turn)
+            
+            if i == DRAW:
+                return "draw"
 
-            if self.drawOffered:
-                if i.get("drawOffered"):
+            if i.get("drawOffered"):
+                if self.offerDraw() == "draw":
                     return "draw"
-                else:
-                    self.drawOffered = False
-            else:
-                if i.get("drawOffered"):
-                    self.drawOffered = True
 
             outcome = self.move(i["a"], i["b"], i.get("promotionPiece"))
-            if outcome is not None:
+
+            if not i.get("drawOffered") and self.drawOffered:
+                self.drawOffered = False
+
+            if outcome is not None or doneTesting:
                 return outcome
 
     def move(self, a, b, promotionPiece):
@@ -135,23 +135,28 @@ class Game:
             self.positionHistory[str(self)] = 1
         else:
             self.positionHistory[str(self)] += 1
-            for count in self.positionHistory.values():
-                if count == 3:
-                    return "draw"
-                
+            if self.positionHistory[str(self)] == 3:
+                return "draw"
+
         # scan for checkmate or stalemate
         if self.noLegalMoves():
-            if self.check[self.turn]:
+            if self.check[self.opposingSide(self.turn)]:
                 # checkmate
-                return self.opposingSide(self.turn)
+                return self.turn
             # stalemate
             return "draw"
 
         self.turn = self.opposingSide(self.turn)
 
+    def offerDraw(self):
+        if self.drawOffered:
+            return "draw"
+        else:
+            self.drawOffered = True
+
     def noLegalMoves(self):
         for location, piece in self.board.items():
-            if piece.color == self.turn:
+            if piece.color != self.turn:
                 for move in piece.availableMoves(self.board, location[0], location[1]):
                     if not (
                         Board.scanForCheck(
@@ -160,21 +165,22 @@ class Game:
                                 Square.tupleToDict(move),
                                 self.board.copy(),
                             )
-                        )[self.turn]
+                        )[self.opposingSide(self.turn)]
                     ):
                         return False
         return True
 
     # TAKE INPUT IN THE FOLLOWING FORMAT: a (e2), b (e4), promotionPiece (q), drawOffered (True)
-    @staticmethod
-    def takeInput(input):
-
+    def takeInput(self, input):
         # Game loop break condition
         if input.lower() == QUIT:
             return QUIT
 
         if input.lower() == RESIGN:
             return RESIGN
+
+        if input.lower() == DRAW and self.drawOffered:
+            return DRAW
 
         try:
             resultDict = {}
@@ -188,7 +194,7 @@ class Game:
             if len(args) >= 3:
                 promotionDict = {"r": Rook, "n": Knight, "b": Bishop, "q": Queen}
                 resultDict["promotionPiece"] = promotionDict.get(args[2])
-            
+
             if len(args) == 4:
                 if args[3] == DRAW:
                     resultDict["drawOffered"] = True

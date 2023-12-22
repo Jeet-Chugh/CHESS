@@ -30,6 +30,11 @@ class Square:
             colVal = -1
         return {"row": int(rowString) - 1, "col": colVal}
 
+    @staticmethod
+    def stringtoTuple(squareString):
+        stringDict = Square.stringToDict(squareString)
+        return (stringDict["row"], stringDict["col"])
+
 
 class Board:
     @staticmethod
@@ -53,9 +58,7 @@ class Board:
 
         # Pawn promotion
         elif type(piece) == Pawn and b["row"] in [0, 7]:
-            board[(b["row"], b["col"])] = promotionPiece(
-                piece.color, ICON_DICT[piece.color][promotionPiece]
-            )
+            board[(b["row"], b["col"])] = promotionPiece(piece.color)
 
         # En Passant
         elif (
@@ -91,8 +94,11 @@ class Board:
 
         minorPieces = {WHITE: [], BLACK: []}
         for location, piece in board.items():
-            if type(piece) not in [King, Rook, Queen, Pawn]:
-                minorPieces[piece.color].append(piece)
+            if type(piece) == King:
+                continue
+            elif type(piece) in [Rook, Queen, Pawn]:
+                return False
+            minorPieces[piece.color].append(piece)
 
         if len(minorPieces[WHITE]) <= 2 and len(minorPieces[BLACK]) <= 2:
             for pieceList in [minorPieces[WHITE], minorPieces[BLACK]]:
@@ -130,23 +136,27 @@ class Board:
         # find locations for both kings on the board
         kingLocations = {}
         pieceDict = {BLACK: [], WHITE: []}
+        numKings = 0
         for location, piece in board.items():
             if type(piece) == King:
+                numKings += 1
                 kingLocations[piece.color] = location
                 continue
             pieceDict[piece.color].append((piece, location))
 
         # Returns a dictionary that determines each colors check status
-        return {
-            WHITE: canSeeKing(kingLocations[WHITE], pieceDict[BLACK], board),
-            BLACK: canSeeKing(kingLocations[BLACK], pieceDict[WHITE], board),
-        }
+        if numKings == 2:
+            return {
+                WHITE: canSeeKing(kingLocations[WHITE], pieceDict[BLACK], board),
+                BLACK: canSeeKing(kingLocations[BLACK], pieceDict[WHITE], board),
+            }
+        # Only used for testing
+        return {WHITE: False, BLACK: False}
 
 
 class Piece:
-    def __init__(self, color, icon) -> None:
+    def __init__(self, color) -> None:
         self.color = color
-        self.icon = icon
         self.CARDINALS = [(1, 0), (0, 1), (-1, 0), (0, -1)]
         self.DIAGONALS = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
 
@@ -189,8 +199,8 @@ class Piece:
 
 # Class for pieces that need to be tracked for their first move (king, rook)
 class TrackedPiece(Piece):
-    def __init__(self, color, icon) -> None:
-        super().__init__(color, icon)
+    def __init__(self, color) -> None:
+        super().__init__(color)
         self.moved = False
 
     # Overrides validateMove to reset moved to False if the attempted move is illegal
@@ -204,11 +214,19 @@ class TrackedPiece(Piece):
 
 
 class Rook(TrackedPiece):
+    def __init__(self, color) -> None:
+        super().__init__(color)
+        self.icon = ICON_DICT[color][Rook]
+
     def availableMoves(self, board, r, c):
         return self.findAvailableMoves(board, r, c, self.CARDINALS)
 
 
 class Knight(Piece):
+    def __init__(self, color) -> None:
+        super().__init__(color)
+        self.icon = ICON_DICT[color][Knight]
+
     # Set of all legal knight moves given a base square
     @staticmethod
     def knightList(r, c, a, b):
@@ -232,16 +250,28 @@ class Knight(Piece):
 
 
 class Bishop(Piece):
+    def __init__(self, color) -> None:
+        super().__init__(color)
+        self.icon = ICON_DICT[color][Bishop]
+
     def availableMoves(self, board, r, c):
         return self.findAvailableMoves(board, r, c, self.DIAGONALS)
 
 
 class Queen(Piece):
+    def __init__(self, color) -> None:
+        super().__init__(color)
+        self.icon = ICON_DICT[color][Queen]
+
     def availableMoves(self, board, r, c):
         return self.findAvailableMoves(board, r, c, self.CARDINALS + self.DIAGONALS)
 
 
 class King(TrackedPiece):
+    def __init__(self, color) -> None:
+        super().__init__(color)
+        self.icon = ICON_DICT[color][King]
+
     # Set of all legal king moves given a base square
     @staticmethod
     def kingList(r, c):
@@ -286,7 +316,7 @@ class King(TrackedPiece):
             and not board.get((col, 0)).moved
             and [board.get((col, 1)), board.get((col, 2)), board.get((col, 3))]
             == [None, None, None]
-            and Board.scanForCheck(board)["status"][self.color] == False
+            and Board.scanForCheck(board)[self.color] == False
         ):
             # if moving one to the left doesnt result in check
             board = Board.executeMove(
@@ -322,10 +352,14 @@ class King(TrackedPiece):
 
 class Pawn(Piece):
     # Accepts a direction, which is 1 for white and -1 for black
-    def __init__(self, color, icon, direction):
+    def __init__(self, color):
+        if color == WHITE:
+            self.icon = ICON_DICT[WHITE][Pawn]
+            self.direction = 1
+        else:
+            self.icon = ICON_DICT[BLACK][Pawn]
+            self.direction = -1
         self.color = color
-        self.icon = icon
-        self.direction = direction
         # En passant validity status for each individual piece
         self.enPassant = {"col": -1, "age": 0}
 

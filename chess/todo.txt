@@ -1,4 +1,3 @@
 TO DO:
 
-- fill in test cases
-- fix all bugs
+- start django project
