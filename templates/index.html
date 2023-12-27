@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Board</title>
+    <!-- Add Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .chessboard {
+            margin-top: 100px;
+            width: 400px;
+            height: 400px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+        }
+
+        .square {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            font-family: 'Arial Unicode MS';
+            cursor: default;
+        }
+
+        .even {
+            background-color: #eee;
+        }
+
+        .odd {
+            background-color: #ddd;
+        }
+
+        .btn {
+            background-color: #808080;
+        }
+    </style>
+    <script>
+        // When the DOM loads (on any change)
+        document.addEventListener('DOMContentLoaded', function() {
+            // transmit board into JSON
+            var boardJSON = {{ board | tojson }};
+            var highlightedSquare = '';
+            var circledSquares = []
+
+            var squares = document.querySelectorAll('.square');
+            squares.forEach(function(square) {
+                // sets each populated square with its corresponsing icon
+                if (boardJSON.hasOwnProperty(square.id)) {
+                    square.textContent = boardJSON[square.id];
+                }
+
+                // prevents text selection on square unicode characters
+                square.addEventListener('mousedown', function(e){ e.preventDefault(); }, false);
+
+                // highlight valid squares
+                square.addEventListener('click', function() {
+                    // Make a POST request using the Fetch API
+                    fetch('/square-clicked', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({id : square.id})
+                    })
+                    .then(result => result.json())
+                    .then(newHighlightSquares => {
+                        console.log(newHighlightSquares);
+                        circledSquares.forEach(function(oldCircledSquare) {
+                            document.getElementById(oldCircledSquare).textContent = null;
+                        });
+                        circledSquares = [];
+                        if (highlightedSquare !== '') {
+                            targetSquare = document.getElementById(highlightedSquare);
+                            if (targetSquare.classList.contains('even')) {
+                                targetSquare.style.backgroundColor = '#eee';
+                            }
+                            else {
+                                targetSquare.style.backgroundColor = '#ddd';
+                            }
+                        } 
+                        square.style.backgroundColor = 'yellow';
+                        highlightedSquare = square.id;
+                        newHighlightSquares.forEach(function(newHighlightSquare) {
+                            targetSquare = document.getElementById(newHighlightSquare);
+                            if (targetSquare.textContent == '') {
+                                targetSquare.textContent = '○';
+                                circledSquares.push(newHighlightSquare);
+                            }
+                        });
+                    })
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+
+<div class="container w-50">
+    <div class="buttonList center">
+        <div class="row">
+            <div class="col">
+              <ul class="list-inline">
+                <li class="list-inline-item">
+                  <button type="button" class="btn newGame">New Game</button>
+                </li>
+                <li class="list-inline-item">
+                  <button type="button" class="btn resign">Resign</button>
+                </li>
+                <li class="list-inline-item">
+                  <button type="button" class="btn offerDraw">Offer Draw</button>
+                </li>
+              </ul>
+            </div>
+          </div>
+    </div>
+    <div class="chessboard">
+        <div class="square even labelNum" id="a8"></div>
+        <div class="square odd" id="b8"></div>
+        <div class="square even" id="c8"></div>
+        <div class="square odd" id="d8"></div>
+        <div class="square even" id="e8"></div>
+        <div class="square odd" id="f8"></div>
+        <div class="square even" id="g8"></div>
+        <div class="square odd" id="h8"></div>
+
+        <div class="square odd labelNum" id="a7"></div>
+        <div class="square even" id="b7"></div>
+        <div class="square odd" id="c7"></div>
+        <div class="square even" id="d7"></div>
+        <div class="square odd" id="e7"></div>
+        <div class="square even" id="f7"></div>
+        <div class="square odd" id="g7"></div>
+        <div class="square even" id="h7"></div>
+
+        <div class="square even labelNum" id="a6"></div>
+        <div class="square odd" id="b6"></div>
+        <div class="square even" id="c6"></div>
+        <div class="square odd" id="d6"></div>
+        <div class="square even" id="e6"></div>
+        <div class="square odd" id="f6"></div>
+        <div class="square even" id="g6"></div>
+        <div class="square odd" id="h6"></div>
+
+        <div class="square odd labelNum" id="a5"></div>
+        <div class="square even" id="b5"></div>
+        <div class="square odd" id="c5"></div>
+        <div class="square even" id="d5"></div>
+        <div class="square odd" id="e5"></div>
+        <div class="square even" id="f5"></div>
+        <div class="square odd" id="g5"></div>
+        <div class="square even" id="h5"></div>
+
+        <div class="square even labelNum" id="a4"></div>
+        <div class="square odd" id="b4"></div>
+        <div class="square even" id="c4"></div>
+        <div class="square odd" id="d4"></div>
+        <div class="square even" id="e4"></div>
+        <div class="square odd" id="f4"></div>
+        <div class="square even" id="g4"></div>
+        <div class="square odd" id="h4"></div>
+
+        <div class="square odd labelNum" id="a3"></div>
+        <div class="square even" id="b3"></div>
+        <div class="square odd" id="c3"></div>
+        <div class="square even" id="d3"></div>
+        <div class="square odd" id="e3"></div>
+        <div class="square even" id="f3"></div>
+        <div class="square odd" id="g3"></div>
+        <div class="square even" id="h3"></div>
+
+        <div class="square even labelNum" id="a2"></div>
+        <div class="square odd" id="b2"></div>
+        <div class="square even" id="c2"></div>
+        <div class="square odd" id="d2"></div>
+        <div class="square even" id="e2"></div>
+        <div class="square odd" id="f2"></div>
+        <div class="square even" id="g2"></div>
+        <div class="square odd" id="h2"></div>
+
+        <div class="square odd labelNum labelLetter" id="a1"></div>
+        <div class="square even labelLetter" id="b1"></div>
+        <div class="square odd labelLetter" id="c1"></div>
+        <div class="square even labelLetter" id="d1"></div>
+        <div class="square odd labelLetter" id="e1"></div>
+        <div class="square even labelLetter" id="f1"></div>
+        <div class="square odd labelLetter" id="g1"></div>
+        <div class="square even labelLetter" id="h1"></div>
+    </div>
+</div>
+
+<!-- Add Bootstrap JS (optional) -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<!-- <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.7/dist/umd/popper.min.js"></script> -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+</body>
+</html>

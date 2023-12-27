@@ -1,3 +1,6 @@
 TO DO:
 
-- start django project
+- create index.html (chess board visualization) with HTML and CSS (Bootstrap)
+- Ensure that the asynchronous game mechanics work
+- implement resignation and draw offerings for asynchronous gameplay
+- 

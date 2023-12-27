@@ -1,7 +1,7 @@
-from game import Game, QUIT, DRAW, RESIGN
-from pieces import Pawn, Rook, Knight, Bishop, Queen, King, Square
-from pieces import ICON_DICT, WHITE, BLACK
-from errors import *
+from chess.game import Game, QUIT, DRAW, RESIGN
+from chess.pieces import Pawn, Rook, Knight, Bishop, Queen, King, Square
+from chess.pieces import ICON_DICT, WHITE, BLACK
+from chess.errors import *
 import unittest
 
 TESTING_BOARD = {
@@ -238,7 +238,7 @@ class TestQueen(unittest.TestCase):
             self.assertFalse(testNormalMove(piece, a, b, board))
 
 
-class TestKing(unittest.TestCase):
+class test_King(unittest.TestCase):
     def test_normalMoves(self):
         piece = King(WHITE)
         a = "d4"
@@ -332,7 +332,7 @@ class TestKing(unittest.TestCase):
         self.assertIsInstance(legal.board.get(Square.stringtoTuple("f8")), Rook)
 
 
-class TestCheck(unittest.TestCase):
+class test_Check(unittest.TestCase):
     def test_movingInAndOutOfCheck(self):
         check = Game(board=Game.defaultBoard(), testMoves=["e2 e3", "f7 f6", "d1 h5"])
         self.assertTrue(check.check[BLACK])
@@ -384,7 +384,7 @@ class TestCheck(unittest.TestCase):
         self.assertTrue(game.check[BLACK])
 
 
-class TestWinConditions(unittest.TestCase):
+class test_WinConditions(unittest.TestCase):
     def test_checkmate(self):
         board = {
             Square.stringtoTuple("h8"): King(WHITE),
@@ -461,6 +461,3 @@ class TestWinConditions(unittest.TestCase):
         bishops[Square.stringtoTuple("a2")] = Bishop(WHITE)
         game4 = Game(board=bishops, testMoves=["d1 d8", "e8 d8"])
         self.assertFalse(game4.outcome == "draw")
-
-if __name__ == "__main__":
-    unittest.main()

@@ -41,6 +41,7 @@ class ExposingCheckError(Exception):
         self.message = "Move exposes you to check!"
         super().__init__(self.message)
 
+
 class InvalidPromotionPieceError(Exception):
     def __init__(self, *args: object) -> None:
         self.message = "Invalid promotion piece!"

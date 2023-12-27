@@ -1,6 +1,6 @@
-from pieces import Square, Board, Pawn, Rook, Knight, Bishop, Queen, King
-from pieces import WHITE, BLACK, ICON_DICT
-from errors import *
+from chess.pieces import Square, Board, Pawn, Rook, Knight, Bishop, Queen, King
+from chess.pieces import WHITE, BLACK, ICON_DICT
+from chess.errors import *
 
 QUIT = "quit"
 RESIGN = "resign"
@@ -17,7 +17,10 @@ class Game:
         self.boardHistory = []
         self.testMoves = testMoves
         self.board = board
-        self.outcome = self.startGame()
+        self.outcome = None
+
+        if self.testMoves:
+            self.runTestMoves()
 
     @staticmethod
     def opposingSide(turn):
@@ -38,45 +41,48 @@ class Game:
             board[(6, i)] = Pawn(BLACK)
         return board
 
-    def startGame(self):
+    def runTestMoves(self):
         doneTesting = False
-        if self.testMoves:
-            testMovesIndex = 0
+        testMovesIndex = 0
         while True:
-            # print the board each turn
-            if not self.testMoves:
-                print("\n\n" + str(self) + "\n\n")
-
             # if self.testMoves, pull from that list, otherwise take string input
-            if not self.testMoves:
-                i = self.takeInput(input("Enter your move:    "))
-            else:
-                if testMovesIndex == len(self.testMoves) - 1:
-                    doneTesting = True
-                i = self.takeInput(self.testMoves[testMovesIndex])
-                testMovesIndex += 1
+            if testMovesIndex == len(self.testMoves) - 1:
+                doneTesting = True
+            i = self.takeInput(self.testMoves[testMovesIndex])
+            testMovesIndex += 1
 
             if i == QUIT:
                 return None
             if i == RESIGN:
-                return self.opposingSide(self.turn)
-            
+                self.outcome = self.opposingSide(self.turn)
+                break
+
             if i == DRAW:
-                return "draw"
+                self.outcome = "draw"
+                break
 
             if i.get("drawOffered"):
                 if self.offerDraw() == "draw":
-                    return "draw"
+                    self.outcome = "draw"
+                    break
 
-            outcome = self.move(i["a"], i["b"], i.get("promotionPiece"))
+            self.move(i["a"], i["b"], i.get("promotionPiece"))
 
             if not i.get("drawOffered") and self.drawOffered:
                 self.drawOffered = False
 
-            if outcome is not None or doneTesting:
-                return outcome
+            if self.outcome is not None or doneTesting:
+                break
 
-    def move(self, a, b, promotionPiece):
+    def move(self, a=None, b=None, promotionPiece=None, input=""):
+        if self.outcome is not None:
+            raise RuntimeError()
+
+        if not self.testMoves:
+            i = self.takeInput(input)
+            a, b, promotionPiece = i.get("a"), i.get("b"), i.get("promotionPiece")
+            changes = {}
+
         self.boardHistory.append(self.board.copy())
         Board.updateEnPassant(self.board)
 
@@ -124,11 +130,13 @@ class Game:
         else:
             self.fiftyMoveRule += 1
             if self.fiftyMoveRule == 50:
-                return "draw"
+                self.outcome = "draw"
+                return {}
 
         # check for insufficient material
         if Board.insufficientMaterial(self.board):
-            return "draw"
+            self.outcome = "draw"
+            return {}
 
         # check for repetition
         if str(self) not in self.positionHistory.keys():
@@ -136,15 +144,18 @@ class Game:
         else:
             self.positionHistory[str(self)] += 1
             if self.positionHistory[str(self)] == 3:
-                return "draw"
+                self.outcome = "draw"
+                return {}
 
         # scan for checkmate or stalemate
         if self.noLegalMoves():
             if self.check[self.opposingSide(self.turn)]:
                 # checkmate
-                return self.turn
+                self.outcome = self.turn
+                return 
             # stalemate
-            return "draw"
+            self.outcome = "draw"
+            return {}
 
         self.turn = self.opposingSide(self.turn)
 
@@ -153,6 +164,9 @@ class Game:
             return "draw"
         else:
             self.drawOffered = True
+
+    def resign(self):
+        self.outcome = self.opposingSide(self.turn)
 
     def noLegalMoves(self):
         for location, piece in self.board.items():
