@@ -44,20 +44,20 @@
         document.addEventListener('DOMContentLoaded', function() {
             // transmit board into JSON
             var boardJSON = {{ board | tojson }};
-            var highlightedSquare = '';
-            var circledSquares = []
+            var highlightedSquare = ''
+            var circledSquares = [];
 
             var squares = document.querySelectorAll('.square');
             squares.forEach(function(square) {
-                // sets each populated square with its corresponsing icon
+                // prevents text selection on square unicode characters
+                square.addEventListener('mousedown', function(e){ e.preventDefault(); }, false);
+
+                // populates each square when DOM is initially loaded
                 if (boardJSON.hasOwnProperty(square.id)) {
                     square.textContent = boardJSON[square.id];
                 }
 
-                // prevents text selection on square unicode characters
-                square.addEventListener('mousedown', function(e){ e.preventDefault(); }, false);
-
-                // highlight valid squares
+                // each time a square is clicked
                 square.addEventListener('click', function() {
                     // Make a POST request using the Fetch API
                     fetch('/square-clicked', {
@@ -65,34 +65,50 @@
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({id : square.id})
+                        body: JSON.stringify({id : square.id, highlightedSquare : highlightedSquare})
                     })
+                    // turn python result into JSON
                     .then(result => result.json())
-                    .then(newHighlightSquares => {
-                        console.log(newHighlightSquares);
+                    // perform operations on JSON data
+                    .then(data => {
+                        // Clear old circled squares and reset circledSquares list var
                         circledSquares.forEach(function(oldCircledSquare) {
-                            document.getElementById(oldCircledSquare).textContent = null;
+                            document.getElementById(oldCircledSquare).textContent = '';
                         });
                         circledSquares = [];
+
+                        // clear old highlightedSquare and reset highlightedSquare var
                         if (highlightedSquare !== '') {
-                            targetSquare = document.getElementById(highlightedSquare);
-                            if (targetSquare.classList.contains('even')) {
-                                targetSquare.style.backgroundColor = '#eee';
+                            hSquare = document.getElementById(highlightedSquare);
+                            if (hSquare.classList.contains('even')) {
+                                hSquare.style.backgroundColor = '#eee';
+                            } else {
+                                hSquare.style.backgroundColor = '#ddd';
                             }
-                            else {
-                                targetSquare.style.backgroundColor = '#ddd';
-                            }
-                        } 
-                        square.style.backgroundColor = 'yellow';
-                        highlightedSquare = square.id;
-                        newHighlightSquares.forEach(function(newHighlightSquare) {
-                            targetSquare = document.getElementById(newHighlightSquare);
-                            if (targetSquare.textContent == '') {
-                                targetSquare.textContent = '○';
-                                circledSquares.push(newHighlightSquare);
-                            }
-                        });
-                    })
+                            highlightedSquare = '';
+                        }
+                        
+                        // If click is a valid move
+                        if (data.move) {
+                            // NEED TO IMPLEMENT
+                            return;
+                        }
+
+                        // If click is out of turn, double click, or illegal square
+                        if (data.highlight !== '') {
+                            document.getElementById(data.highlight).style.backgroundColor = 'yellow';
+                            highlightedSquare = data.highlight
+                        }
+                        if (data.circle !== []) {
+                            data.circle.forEach(function(cSquare) {
+                                targetSquare = document.getElementById(cSquare);
+                                if (targetSquare.textContent == '') {
+                                    targetSquare.textContent = '○';
+                                    circledSquares.push(cSquare);
+                                }
+                            });
+                        }
+                    });
                 });
             });
         });

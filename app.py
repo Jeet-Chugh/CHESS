@@ -20,7 +20,7 @@ def index():
     game = Game(Game.defaultBoard())
     gameDict = {}
     for location, piece in game.board.items():
-        gameDict[Square.dictToString(Square.tupleToDict(location))] = piece.icon
+        gameDict[Square.tupleToString(location)] = piece.icon
     jsonBoard = gameDict
 
     return render_template("index.html", board=jsonBoard)
@@ -28,13 +28,33 @@ def index():
 # on square click
 @app.route('/square-clicked', methods=['POST'])
 def process_click():
+    # get data from POST request
     data = request.get_json()
+
+    returnData = {'circle' : [], 'highlight' : '', 'move' : False}
+    # return which squares to add a circle to or highlight
     squareLocation = Square.stringtoTuple(data["id"])
     square = game.board.get(squareLocation)
-    if square is None:
-        return []
-    else:
-        return [Square.dictToString(Square.tupleToDict(x)) for x in square.availableMoves(game.board, squareLocation[0], squareLocation[1])]
+
+    # if clicked square is highlighted square
+    if data['id'] == data['highlightedSquare']:
+        return returnData
+
+    # if click is a move
+    if data['highlightedSquare'] != "":
+        hLocation = Square.stringtoTuple(data['highlightedSquare'])
+        if squareLocation in game.board.get(hLocation).availableMoves(game.board, hLocation[0], hLocation[1]):
+            returnData['move'] = True
+            game.move()
+        return returnData
+
+    # if the square is not a move and it is not another friendly piece
+    if square is None or square.color != game.turn:
+        return returnData
+    
+    returnData['circle'] = [Square.tupleToString(x) for x in square.availableMoves(game.board, squareLocation[0], squareLocation[1])]
+    returnData['highlight'] = Square.tupleToString(squareLocation)
+    return returnData
 
 if __name__ == "__main__":
     app.run(debug=True)

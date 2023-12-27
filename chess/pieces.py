@@ -34,6 +34,10 @@ class Square:
     def stringtoTuple(squareString):
         stringDict = Square.stringToDict(squareString)
         return (stringDict["row"], stringDict["col"])
+    
+    @staticmethod
+    def tupleToString(squareString):
+        return Square.dictToString(Square.tupleToDict(squareString))
 
 
 class Board:
@@ -396,6 +400,6 @@ class Pawn(Piece):
 
 
 ICON_DICT = {
-    BLACK: {Rook: "♖", Knight: "♘", Bishop: "♗", King: "♔", Queen: "♕", Pawn: "♙"},
-    WHITE: {Rook: "♜", Knight: "♞", Bishop: "♝", King: "♚", Queen: "♛", Pawn: "♟"},
+    WHITE: {Rook: "♖", Knight: "♘", Bishop: "♗", King: "♔", Queen: "♕", Pawn: "♙"},
+    BLACK: {Rook: "♜", Knight: "♞", Bishop: "♝", King: "♚", Queen: "♛", Pawn: "♟"},
 }
