@@ -1,6 +1,14 @@
 TO DO:
 
-- create index.html (chess board visualization) with HTML and CSS (Bootstrap)
-- Ensure that the asynchronous game mechanics work
-- implement resignation and draw offerings for asynchronous gameplay
-- 
+- finish adding support for move and piece highlighting
+    - dont highlight squares that arent pieces
+    - dont highlight pieces that are on opposing side (based on turn)
+    - allow for double click to cancel highlighting
+    - test highlighting for capturing and on enemy pieces
+- implement system for making moves
+- Add support for flipping game board
+    - add button to index.html
+- Add support for new game
+- Add support for resignation
+- Add support for offering draw
+- make design pretty
