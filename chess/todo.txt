@@ -1,10 +1,20 @@
 TO DO:
 
-- test highlighting for capturing and on enemy pieces
-- implement system for making moves
+- Add 
+    - Change "Offer Draw" button to "Accept Draw" if draw is offered
+
+- Add checkmate support
+- Add message upon checkmate, various draw scenarios
+
 - Add support for flipping game board
     - add button to index.html
-- Add support for new game
-- Add support for resignation
 - Add support for offering draw
+
+- consolidate js functions at the bottom of the script tag
+- eliminate jinja use at startup?
+
 - make design pretty
+- fix issue with white squares not turning pale
+- make popup upon game conclusion
+
+- make game multiplayer?

@@ -7,32 +7,45 @@
     <!-- Add Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
+
+        .container {
+            align-items: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
         .chessboard {
-            margin-top: 100px;
-            width: 400px;
-            height: 400px;
+            max-width: 70vw;
+            max-height: 70vh;
+            width: 40vw;
+            height: 40vw;
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
+            grid-column-gap: 0px;
+            grid-row-gap: 0px;
+            margin-bottom: 5vh;
+            margin-top: 5vh;
         }
 
         .square {
-            width: 100%;
-            height: 100%;
+            aspect-ratio: 1/ 1;
+            gap: 0%;
             display: flex;
-            align-items: center;
             justify-content: center;
-            font-size: 30px;
+            align-items: center;
+            font-size: 3vw;
             font-family: 'Arial Unicode MS';
             cursor: default;
         }
 
         .even {
-            background-color: #eee;
+            background-color: rbg(234, 237, 207);
         }
 
         .odd {
-            background-color: #ddd;
+            background-color: rgb(126, 152, 92);
         }
 
         .btn {
@@ -46,7 +59,10 @@
             var boardJSON = {{ board | tojson }};
             var highlightedSquare = ''
             var circledSquares = [];
-
+            var captureHighlights = [];
+            var checkHighlight = '';
+            var outcome = '';
+            
             var squares = document.querySelectorAll('.square');
             squares.forEach(function(square) {
                 // prevents text selection on square unicode characters
@@ -59,17 +75,14 @@
 
                 // each time a square is clicked
                 square.addEventListener('click', function() {
-                    // Make a POST request using the Fetch API
                     fetch('/square-clicked', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({id : square.id, highlightedSquare : highlightedSquare})
+                        body: JSON.stringify({id : square.id, highlightedSquare : highlightedSquare, checkHighlightedSquare : checkHighlight})
                     })
-                    // turn python result into JSON
                     .then(result => result.json())
-                    // perform operations on JSON data
                     .then(data => {
                         // Clear old circled squares and reset circledSquares list var
                         circledSquares.forEach(function(oldCircledSquare) {
@@ -77,58 +90,146 @@
                         });
                         circledSquares = [];
 
+                        // Clear old capture highlights
+                        captureHighlights.forEach(function(oldCaptureHighlight) {
+                            targetSquare = document.getElementById(oldCaptureHighlight);
+                            if (targetSquare.classList.contains('even')) {
+                                targetSquare.style.backgroundColor = rbg(234, 237, 207);
+                            } else {
+                                targetSquare.style.backgroundColor = rgb(126, 152, 92);
+                            }
+                        });
+                        captureHighlights = [];
+
                         // clear old highlightedSquare and reset highlightedSquare var
                         if (highlightedSquare !== '') {
                             hSquare = document.getElementById(highlightedSquare);
                             if (hSquare.classList.contains('even')) {
-                                hSquare.style.backgroundColor = '#eee';
+                                hSquare.style.backgroundColor = rbg(234, 237, 207);
                             } else {
-                                hSquare.style.backgroundColor = '#ddd';
+                                hSquare.style.backgroundColor = rgb(126, 152, 92);
                             }
                             highlightedSquare = '';
                         }
                         
                         // If click is a valid move
-                        if (data.move) {
-                            // NEED TO IMPLEMENT
-                            return;
+                        if (data.move == true) {
+                            fetch('/get-board', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            })
+                            .then(result => result.json())
+                            .then(boardData => {
+                                squares.forEach(function(square) {
+                                    if (boardData.hasOwnProperty(square.id)) {
+                                        square.textContent = boardData[square.id];
+                                    } else {
+                                        square.textContent = '';
+                                    }
+                                });
+                                // clear old checkHighlight and reset checkHighlight var
+                                if (checkHighlight !== '') {
+                                    hSquare = document.getElementById(checkHighlight);
+                                    if (hSquare.classList.contains('even')) {
+                                        hSquare.style.backgroundColor = rbg(234, 237, 207);
+                                    } else {
+                                        hSquare.style.backgroundColor = rgb(126, 152, 92);
+                                    }
+                                    checkHighlight = '';
+                                }
+                                if (data.check !== '') {
+                                    document.getElementById(data['check']).style.backgroundColor = 'red';
+                                    checkHighlight = data.check;
+                                }
+                            });
                         }
 
                         // If click is out of turn, double click, or illegal square
-                        if (data.highlight !== '') {
+                        if (data.highlight !== '' && square.style.backgroundColor !== 'red') {
                             document.getElementById(data.highlight).style.backgroundColor = 'yellow';
-                            highlightedSquare = data.highlight
+                            highlightedSquare = data.highlight;
                         }
                         if (data.circle !== []) {
                             data.circle.forEach(function(cSquare) {
                                 targetSquare = document.getElementById(cSquare);
                                 if (targetSquare.textContent == '') {
                                     targetSquare.textContent = '○';
-                                    circledSquares.push(cSquare);
+                                    circledSquares.push(cSquare)
+                                } else {
+                                    targetSquare.style.backgroundColor = 'orange';
+                                    captureHighlights.push(cSquare);
                                 }
                             });
                         }
                     });
                 });
             });
+            document.getElementById('newGame').addEventListener('click', function() {
+                outcome = '';
+                process_outcome('');
+                fetch('/new-game', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(result => result.json())
+                .then(data => {
+                    squares.forEach(function(square) {
+                        if (data.hasOwnProperty(square.id)) {
+                            square.textContent = data[square.id];
+                        } else {
+                            square.textContent = '';
+                        }
+                    });
+                });
+            });
+            document.getElementById('resign').addEventListener('click', function() {
+                fetch('/resign', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(result => result.json())
+                .then(data => {
+                    outcome = data;
+                    process_outcome(outcome)
+                });
+            });
+            document.getElementById('offerDraw').addEventListener('click', function() {
+                fetch('/offer-draw', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(result => result.json())
+                .then();
+            });
         });
+        function process_outcome(outcome) {
+            document.getElementById("outcome").textContent = outcome;
+        }
     </script>
 </head>
 <body>
 
-<div class="container w-50">
+<div class="container">
     <div class="buttonList center">
         <div class="row">
             <div class="col">
               <ul class="list-inline">
                 <li class="list-inline-item">
-                  <button type="button" class="btn newGame">New Game</button>
+                  <button type="button" id="newGame" class="btn">New Game</button>
                 </li>
                 <li class="list-inline-item">
-                  <button type="button" class="btn resign">Resign</button>
+                  <button type="button" id="resign" class="btn">Resign</button>
                 </li>
                 <li class="list-inline-item">
-                  <button type="button" class="btn offerDraw">Offer Draw</button>
+                  <button type="button" id="offerDraw" class="btn">Offer Draw</button>
                 </li>
               </ul>
             </div>
@@ -206,6 +307,9 @@
         <div class="square even labelLetter" id="f1"></div>
         <div class="square odd labelLetter" id="g1"></div>
         <div class="square even labelLetter" id="h1"></div>
+    </div>
+    <div>
+        <p id="outcome">none</p>
     </div>
 </div>
 

@@ -79,9 +79,9 @@ class Game:
             raise RuntimeError()
 
         if not self.testMoves:
-            i = self.takeInput(input)
-            a, b, promotionPiece = i.get("a"), i.get("b"), i.get("promotionPiece")
-            changes = {}
+            if a is None and b is None:
+                i = self.takeInput(input)
+                a, b, promotionPiece = i.get("a"), i.get("b"), i.get("promotionPiece")
 
         self.boardHistory.append(self.board.copy())
         Board.updateEnPassant(self.board)
@@ -131,12 +131,12 @@ class Game:
             self.fiftyMoveRule += 1
             if self.fiftyMoveRule == 50:
                 self.outcome = "draw"
-                return {}
+                return
 
         # check for insufficient material
         if Board.insufficientMaterial(self.board):
             self.outcome = "draw"
-            return {}
+            return
 
         # check for repetition
         if str(self) not in self.positionHistory.keys():
@@ -145,17 +145,17 @@ class Game:
             self.positionHistory[str(self)] += 1
             if self.positionHistory[str(self)] == 3:
                 self.outcome = "draw"
-                return {}
+                return
 
         # scan for checkmate or stalemate
         if self.noLegalMoves():
             if self.check[self.opposingSide(self.turn)]:
                 # checkmate
                 self.outcome = self.turn
-                return 
+                return
             # stalemate
             self.outcome = "draw"
-            return {}
+            return
 
         self.turn = self.opposingSide(self.turn)
 

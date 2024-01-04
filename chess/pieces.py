@@ -388,7 +388,7 @@ class Pawn(Piece):
         if (r + self.direction, c) not in board:
             moves.append((r + self.direction, c))
         # moving forward by two on first move
-        if r == startingRow and ((r + self.direction, c) in moves):
+        if r == startingRow and ((r + self.direction, c) in moves) and not (r + (2 * self.direction), c) in board:
             moves.append((r + (2 * self.direction), c))
         return moves
 
