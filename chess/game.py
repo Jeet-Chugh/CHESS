@@ -161,9 +161,12 @@ class Game:
 
     def offerDraw(self):
         if self.drawOffered:
+            self.outcome = "draw"
+            self.drawOffered = False
             return "draw"
         else:
             self.drawOffered = True
+            return ""
 
     def resign(self):
         self.outcome = self.opposingSide(self.turn)

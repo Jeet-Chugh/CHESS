@@ -62,6 +62,8 @@ class Board:
 
         # Pawn promotion
         elif type(piece) == Pawn and b["row"] in [0, 7]:
+            if promotionPiece is None:
+                promotionPiece = Queen
             board[(b["row"], b["col"])] = promotionPiece(piece.color)
 
         # En Passant

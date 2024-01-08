@@ -1,20 +1,12 @@
 TO DO:
 
-- Add 
-    - Change "Offer Draw" button to "Accept Draw" if draw is offered
-
-- Add checkmate support
-- Add message upon checkmate, various draw scenarios
-
-- Add support for flipping game board
-    - add button to index.html
-- Add support for offering draw
-
-- consolidate js functions at the bottom of the script tag
-- eliminate jinja use at startup?
-
+- add popup upon game conclusion
+- Clean up js code into function calls
+- Add support for choosing pawn promotion piece
 - make design pretty
-- fix issue with white squares not turning pale
-- make popup upon game conclusion
 
-- make game multiplayer?
+OPTIONAL: 
+- Create warning for resignation, new game
+- Multiplayer?
+- Add support for flipping game board
+    - new template?

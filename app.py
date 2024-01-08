@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, Response
 from chess.game import Game
 from chess.pieces import *
 from chess.errors import *
@@ -45,15 +45,22 @@ def process_click():
             returnData["check"] = data["checkHighlightedSquare"]
         return returnData
 
-    if data["highlightedSquare"] != "":
-        hLocation = Square.stringtoTuple(data["highlightedSquare"])
+    if data["highlightedSquare"] != "" or data["checkHighlightedSquare"] != "":
+        if data["highlightedSquare"] != "":
+            hSquare = data["highlightedSquare"]
+        elif data["checkHighlightedSquare"] != "":
+            hSquare = data["checkHighlightedSquare"]
+        hLocation = Square.stringtoTuple(hSquare)
         # if click is a move
+        print(game.board.get(hLocation).availableMoves(
+            game.board, hLocation[0], hLocation[1]
+        ))
         if squareLocation in game.board.get(hLocation).availableMoves(
             game.board, hLocation[0], hLocation[1]
         ):
             returnData["move"] = True
             game.move(
-                Square.stringToDict(data["highlightedSquare"]),
+                Square.stringToDict(hSquare),
                 Square.stringToDict(data["id"]),
             )
             if Board.scanForCheck(game.board)[game.turn]:
@@ -65,6 +72,7 @@ def process_click():
 
     # if click is on another friendly piece
     if square is not None and square.color == game.turn:
+        print("entered")
         circleList = []
         for move in square.availableMoves(
             game.board, squareLocation[0], squareLocation[1]
@@ -88,9 +96,13 @@ def process_click():
     return returnData
 
 
-@app.route("/get-board", methods=["POST"])
+@app.route("/get-board", methods=["GET"])
 def get_board():
     return get_gameDict(game)
+
+@app.route("/get-outcome", methods=["GET"])
+def get_outcome():
+    return jsonify(game.outcome)
 
 @app.route("/new-game", methods=["GET"])
 def new_game():
@@ -98,14 +110,25 @@ def new_game():
     game = Game(Game.defaultBoard())
     return get_board()
 
-@app.route("/resign", methods=["GET"])
+@app.route("/resign", methods=["POST"])
 def resign():
     game.resign()
-    return jsonify(game.outcome)
+    return Response(status=204)
 
 @app.route("/offer-draw", methods=["GET"])
 def offerDraw():
     game.offerDraw()
+    return jsonify({"drawOffered" : game.drawOffered})
+
+@app.route("/reset-draw", methods=["GET"])
+def resetDraw():
+    game.drawOffered = False
+    return ""
+
+
+@app.route("/flip-board", methods=["GET"])
+def flipBoard():
+    pass
 
 if __name__ == "__main__":
     app.run(debug=True)

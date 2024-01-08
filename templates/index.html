@@ -16,8 +16,8 @@
         }
         
         .chessboard {
-            max-width: 70vw;
-            max-height: 70vh;
+            max-width: 90vw;
+            max-height: 90vh;
             width: 40vw;
             height: 40vw;
             display: grid;
@@ -27,6 +27,7 @@
             grid-row-gap: 0px;
             margin-bottom: 5vh;
             margin-top: 5vh;
+            border: 2px solid grey;
         }
 
         .square {
@@ -41,7 +42,7 @@
         }
 
         .even {
-            background-color: rbg(234, 237, 207);
+            background-color: rgb(234, 237, 207);
         }
 
         .odd {
@@ -58,10 +59,10 @@
             // transmit board into JSON
             var boardJSON = {{ board | tojson }};
             var highlightedSquare = ''
+            var checkHighlight = '';
             var circledSquares = [];
             var captureHighlights = [];
-            var checkHighlight = '';
-            var outcome = '';
+            var drawOffered = false;
             
             var squares = document.querySelectorAll('.square');
             squares.forEach(function(square) {
@@ -94,9 +95,9 @@
                         captureHighlights.forEach(function(oldCaptureHighlight) {
                             targetSquare = document.getElementById(oldCaptureHighlight);
                             if (targetSquare.classList.contains('even')) {
-                                targetSquare.style.backgroundColor = rbg(234, 237, 207);
+                                targetSquare.style.backgroundColor = 'rgb(234, 237, 207)';
                             } else {
-                                targetSquare.style.backgroundColor = rgb(126, 152, 92);
+                                targetSquare.style.backgroundColor = 'rgb(126, 152, 92)';
                             }
                         });
                         captureHighlights = [];
@@ -105,23 +106,34 @@
                         if (highlightedSquare !== '') {
                             hSquare = document.getElementById(highlightedSquare);
                             if (hSquare.classList.contains('even')) {
-                                hSquare.style.backgroundColor = rbg(234, 237, 207);
+                                hSquare.style.backgroundColor = 'rgb(234, 237, 207)';
                             } else {
-                                hSquare.style.backgroundColor = rgb(126, 152, 92);
+                                hSquare.style.backgroundColor = 'rgb(126, 152, 92)';
                             }
                             highlightedSquare = '';
                         }
                         
                         // If click is a valid move
                         if (data.move == true) {
+                            fetch('/reset-draw', {
+                                method: 'GET',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+                            if (drawOffered) {
+                                document.getElementById('offerDraw').textContent = 'Offer Draw';
+                                drawOffered = false;
+                            }
                             fetch('/get-board', {
-                                method: 'POST',
+                                method: 'GET',
                                 headers: {
                                     'Content-Type': 'application/json'
                                 }
                             })
                             .then(result => result.json())
                             .then(boardData => {
+                                // Reflect changes in board
                                 squares.forEach(function(square) {
                                     if (boardData.hasOwnProperty(square.id)) {
                                         square.textContent = boardData[square.id];
@@ -133,16 +145,18 @@
                                 if (checkHighlight !== '') {
                                     hSquare = document.getElementById(checkHighlight);
                                     if (hSquare.classList.contains('even')) {
-                                        hSquare.style.backgroundColor = rbg(234, 237, 207);
+                                        hSquare.style.backgroundColor = 'rgb(234, 237, 207)';
                                     } else {
-                                        hSquare.style.backgroundColor = rgb(126, 152, 92);
+                                        hSquare.style.backgroundColor = 'rgb(126, 152, 92)';
                                     }
                                     checkHighlight = '';
                                 }
+                                // Highlight king square red if its in check
                                 if (data.check !== '') {
                                     document.getElementById(data['check']).style.backgroundColor = 'red';
                                     checkHighlight = data.check;
                                 }
+                                process_outcome();
                             });
                         }
 
@@ -151,6 +165,7 @@
                             document.getElementById(data.highlight).style.backgroundColor = 'yellow';
                             highlightedSquare = data.highlight;
                         }
+                        // Place circles on each legal available move of clicked piece
                         if (data.circle !== []) {
                             data.circle.forEach(function(cSquare) {
                                 targetSquare = document.getElementById(cSquare);
@@ -167,8 +182,6 @@
                 });
             });
             document.getElementById('newGame').addEventListener('click', function() {
-                outcome = '';
-                process_outcome('');
                 fetch('/new-game', {
                     method: 'GET',
                     headers: {
@@ -184,10 +197,20 @@
                             square.textContent = '';
                         }
                     });
+                    process_outcome();
                 });
             });
             document.getElementById('resign').addEventListener('click', function() {
                 fetch('/resign', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(process_outcome());
+            });
+            document.getElementById('offerDraw').addEventListener('click', function() {
+                fetch('/offer-draw', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
@@ -195,12 +218,17 @@
                 })
                 .then(result => result.json())
                 .then(data => {
-                    outcome = data;
-                    process_outcome(outcome)
+                    if (drawOffered == true) {
+                        document.getElementById('offerDraw').textContent = 'Offer Draw';
+                        process_outcome();
+                    } else {
+                        drawOffered = true;
+                        document.getElementById('offerDraw').textContent = 'Accept Draw';
+                    }
                 });
             });
-            document.getElementById('offerDraw').addEventListener('click', function() {
-                fetch('/offer-draw', {
+            document.getElementById('flipBoard').addEventListener('click', function() {
+                fetch('/flip-board', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
@@ -211,7 +239,17 @@
             });
         });
         function process_outcome(outcome) {
-            document.getElementById("outcome").textContent = outcome;
+            fetch('/get-outcome', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(result => result.json())
+            .then(outcome => {
+                // REPLACE WITH POPUP
+                document.getElementById("outcome").textContent = outcome;
+            });
         }
     </script>
 </head>
@@ -230,6 +268,9 @@
                 </li>
                 <li class="list-inline-item">
                   <button type="button" id="offerDraw" class="btn">Offer Draw</button>
+                </li>
+                <li class="list-inline-item">
+                    <button type="button" id="flipBoard" class="btn">Flip Board</button>
                 </li>
               </ul>
             </div>
