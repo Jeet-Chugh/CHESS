@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Board</title>
-    <!-- Add Bootstrap CSS -->
+    <title>Chess | Jeet Chugh
+    </title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        body {
+            background-color : rgb(48, 46, 43);
+        }
 
         .container {
             align-items: center;
@@ -26,8 +29,12 @@
             grid-column-gap: 0px;
             grid-row-gap: 0px;
             margin-bottom: 5vh;
-            margin-top: 5vh;
             border: 2px solid grey;
+        }
+
+        #outcome {
+            color: white;
+            font-size: 5vw;
         }
 
         .square {
@@ -39,6 +46,7 @@
             font-size: 3vw;
             font-family: 'Arial Unicode MS';
             cursor: default;
+            position: relative;
         }
 
         .even {
@@ -50,31 +58,38 @@
         }
 
         .btn {
-            background-color: #808080;
+            background-color: rgb(33, 32, 29);
+            color: rgb(223, 223, 222);
+        }
+
+        #resign:hover {
+            color: red;
+        }
+
+        #newGame:hover {
+            color: lightgreen;
+        }
+
+        #offerDraw:hover {
+            color: orange;
         }
     </style>
     <script>
-        // When the DOM loads (on any change)
         document.addEventListener('DOMContentLoaded', function() {
-            // transmit board into JSON
-            var boardJSON = {{ board | tojson }};
             var highlightedSquare = ''
             var checkHighlight = '';
             var circledSquares = [];
             var captureHighlights = [];
             var drawOffered = false;
-            
+            update_board();
+
             var squares = document.querySelectorAll('.square');
             squares.forEach(function(square) {
-                // prevents text selection on square unicode characters
+
+                // prevents text selection on characters
                 square.addEventListener('mousedown', function(e){ e.preventDefault(); }, false);
 
-                // populates each square when DOM is initially loaded
-                if (boardJSON.hasOwnProperty(square.id)) {
-                    square.textContent = boardJSON[square.id];
-                }
-
-                // each time a square is clicked
+                // SQUARE CLICKED
                 square.addEventListener('click', function() {
                     fetch('/square-clicked', {
                         method: 'POST',
@@ -84,80 +99,14 @@
                         body: JSON.stringify({id : square.id, highlightedSquare : highlightedSquare, checkHighlightedSquare : checkHighlight})
                     })
                     .then(result => result.json())
-                    .then(data => {
-                        // Clear old circled squares and reset circledSquares list var
-                        circledSquares.forEach(function(oldCircledSquare) {
-                            document.getElementById(oldCircledSquare).textContent = '';
-                        });
-                        circledSquares = [];
-
-                        // Clear old capture highlights
-                        captureHighlights.forEach(function(oldCaptureHighlight) {
-                            targetSquare = document.getElementById(oldCaptureHighlight);
-                            if (targetSquare.classList.contains('even')) {
-                                targetSquare.style.backgroundColor = 'rgb(234, 237, 207)';
-                            } else {
-                                targetSquare.style.backgroundColor = 'rgb(126, 152, 92)';
-                            }
-                        });
-                        captureHighlights = [];
-
-                        // clear old highlightedSquare and reset highlightedSquare var
-                        if (highlightedSquare !== '') {
-                            hSquare = document.getElementById(highlightedSquare);
-                            if (hSquare.classList.contains('even')) {
-                                hSquare.style.backgroundColor = 'rgb(234, 237, 207)';
-                            } else {
-                                hSquare.style.backgroundColor = 'rgb(126, 152, 92)';
-                            }
-                            highlightedSquare = '';
-                        }
+                    .then(data =>  {
+                        clearOldCircledSquares();
+                        clearOldCaptureHighlights();
+                        clearOldHighlightSquare();
                         
                         // If click is a valid move
                         if (data.move == true) {
-                            fetch('/reset-draw', {
-                                method: 'GET',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                }
-                            });
-                            if (drawOffered) {
-                                document.getElementById('offerDraw').textContent = 'Offer Draw';
-                                drawOffered = false;
-                            }
-                            fetch('/get-board', {
-                                method: 'GET',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                }
-                            })
-                            .then(result => result.json())
-                            .then(boardData => {
-                                // Reflect changes in board
-                                squares.forEach(function(square) {
-                                    if (boardData.hasOwnProperty(square.id)) {
-                                        square.textContent = boardData[square.id];
-                                    } else {
-                                        square.textContent = '';
-                                    }
-                                });
-                                // clear old checkHighlight and reset checkHighlight var
-                                if (checkHighlight !== '') {
-                                    hSquare = document.getElementById(checkHighlight);
-                                    if (hSquare.classList.contains('even')) {
-                                        hSquare.style.backgroundColor = 'rgb(234, 237, 207)';
-                                    } else {
-                                        hSquare.style.backgroundColor = 'rgb(126, 152, 92)';
-                                    }
-                                    checkHighlight = '';
-                                }
-                                // Highlight king square red if its in check
-                                if (data.check !== '') {
-                                    document.getElementById(data['check']).style.backgroundColor = 'red';
-                                    checkHighlight = data.check;
-                                }
-                                process_outcome();
-                            });
+                            processMove(data);
                         }
 
                         // If click is out of turn, double click, or illegal square
@@ -165,6 +114,7 @@
                             document.getElementById(data.highlight).style.backgroundColor = 'yellow';
                             highlightedSquare = data.highlight;
                         }
+                        
                         // Place circles on each legal available move of clicked piece
                         if (data.circle !== []) {
                             data.circle.forEach(function(cSquare) {
@@ -181,6 +131,7 @@
                     });
                 });
             });
+            // NEW GAME BUTTON
             document.getElementById('newGame').addEventListener('click', function() {
                 fetch('/new-game', {
                     method: 'GET',
@@ -197,9 +148,12 @@
                             square.textContent = '';
                         }
                     });
+                    document.getElementById("outcome").textContent = '';
+                    document.getElementById("offerDraw").textContent = "Offer Draw";
                     process_outcome();
                 });
             });
+            // RESIGN BUTTON
             document.getElementById('resign').addEventListener('click', function() {
                 fetch('/resign', {
                     method: 'POST',
@@ -209,6 +163,7 @@
                 })
                 .then(process_outcome());
             });
+            // OFFER DRAW BUTTON
             document.getElementById('offerDraw').addEventListener('click', function() {
                 fetch('/offer-draw', {
                     method: 'GET',
@@ -220,6 +175,7 @@
                 .then(data => {
                     if (drawOffered == true) {
                         document.getElementById('offerDraw').textContent = 'Offer Draw';
+                        drawOffered = false;
                         process_outcome();
                     } else {
                         drawOffered = true;
@@ -227,16 +183,68 @@
                     }
                 });
             });
-            document.getElementById('flipBoard').addEventListener('click', function() {
-                fetch('/flip-board', {
+            function clearOldCircledSquares() {
+                circledSquares.forEach(function(oldCircledSquare) {
+                    document.getElementById(oldCircledSquare).textContent = '';
+                });
+                circledSquares = [];
+            }
+            function clearOldCaptureHighlights() {
+                captureHighlights.forEach(function(oldCaptureHighlight) {
+                    targetSquare = document.getElementById(oldCaptureHighlight);
+                    if (targetSquare.classList.contains('even')) {
+                        targetSquare.style.backgroundColor = 'rgb(234, 237, 207)';
+                    } else {
+                        targetSquare.style.backgroundColor = 'rgb(126, 152, 92)';
+                    }
+                });
+                captureHighlights = [];
+            }
+            function clearOldHighlightSquare() {
+                if (highlightedSquare !== '') {
+                    hSquare = document.getElementById(highlightedSquare);
+                    if (hSquare.classList.contains('even')) {
+                        hSquare.style.backgroundColor = 'rgb(234, 237, 207)';
+                    } else {
+                        hSquare.style.backgroundColor = 'rgb(126, 152, 92)';
+                    }
+                    highlightedSquare = '';
+                }
+            }
+            function clearoldCheckHighlight() {
+                if (checkHighlight !== '') {
+                    hSquare = document.getElementById(checkHighlight);
+                    if (hSquare.classList.contains('even')) {
+                        hSquare.style.backgroundColor = 'rgb(234, 237, 207)';
+                    } else {
+                        hSquare.style.backgroundColor = 'rgb(126, 152, 92)';
+                    }
+                    checkHighlight = '';
+                }
+            }
+            function processMove(data) {
+                reset_draw();
+                update_board();
+                clearoldCheckHighlight();
+                // Highlight king square red if its in check
+                if (data.check !== '') {
+                    document.getElementById(data['check']).style.backgroundColor = 'red';
+                    checkHighlight = data.check;
+                }
+                process_outcome();
+            }
+            function reset_draw() {
+                fetch('/reset-draw', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
                     }
-                })
-                .then(result => result.json())
-                .then();
-            });
+                });
+                if (drawOffered) {
+                    document.getElementById('offerDraw').textContent = 'Offer Draw';
+                    drawOffered = false;
+                }
+            }
         });
         function process_outcome(outcome) {
             fetch('/get-outcome', {
@@ -247,30 +255,49 @@
             })
             .then(result => result.json())
             .then(outcome => {
-                // REPLACE WITH POPUP
-                document.getElementById("outcome").textContent = outcome;
+                if (outcome == null) { return }
+                if (outcome == 'draw') {
+                    document.getElementById("outcome").textContent = outcome + '!';
+                } else {
+                    document.getElementById("outcome").textContent = outcome + ' wins!';
+                }
+            });
+        }
+        function update_board() {
+            fetch('/get-board', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(result => result.json())
+            .then(boardData => {
+                squares = document.querySelectorAll(".square");
+                squares.forEach(function(square) {
+                    if (boardData.hasOwnProperty(square.id)) {
+                        square.textContent = boardData[square.id];
+                    } else {
+                        square.textContent = '';
+                    }
+                });
             });
         }
     </script>
 </head>
 <body>
-
 <div class="container">
-    <div class="buttonList center">
+    <div class="buttonList center" style="margin-top: 1vh">
         <div class="row">
             <div class="col">
               <ul class="list-inline">
                 <li class="list-inline-item">
-                  <button type="button" id="newGame" class="btn">New Game</button>
-                </li>
-                <li class="list-inline-item">
-                  <button type="button" id="resign" class="btn">Resign</button>
-                </li>
-                <li class="list-inline-item">
                   <button type="button" id="offerDraw" class="btn">Offer Draw</button>
                 </li>
                 <li class="list-inline-item">
-                    <button type="button" id="flipBoard" class="btn">Flip Board</button>
+                    <button type="button" id="resign" class="btn">Resign</button>
+                </li>
+                <li class="list-inline-item">
+                    <button type="button" id="newGame" class="btn">New Game</button>
                 </li>
               </ul>
             </div>
@@ -350,13 +377,11 @@
         <div class="square even labelLetter" id="h1"></div>
     </div>
     <div>
-        <p id="outcome">none</p>
+        <p id="outcome"></p>
     </div>
 </div>
 
-<!-- Add Bootstrap JS (optional) -->
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<!-- <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.7/dist/umd/popper.min.js"></script> -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
 </body>

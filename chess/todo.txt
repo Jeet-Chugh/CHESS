@@ -1,12 +1,8 @@
 TO DO:
 
 - add popup upon game conclusion
-- Clean up js code into function calls
+- make white pieces have a white background
 - Add support for choosing pawn promotion piece
-- make design pretty
 
 OPTIONAL: 
 - Create warning for resignation, new game
-- Multiplayer?
-- Add support for flipping game board
-    - new template?

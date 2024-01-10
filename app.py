@@ -25,7 +25,7 @@ def get_gameDict(game):
 def index():
     global game
     game = Game(Game.defaultBoard())
-    return render_template("index.html", board=get_gameDict(game))
+    return render_template("index.html")
 
 
 # on square click
